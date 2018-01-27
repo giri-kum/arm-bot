@@ -52,6 +52,8 @@ class Video():
 	self.intrinsic = np.empty((3,3)) #Josh
 	self.inv_extrinsic = np.empty((4,4)) #Josh
 	self.extrinsic = np.empty((4,4)) #Josh
+	self.extrinsic = [[  9.99535508e-01,-3.04757091e-02, 0.00000000e+00,3.45695419e+01], [ -3.04757091e-02,-9.99535508e-01,0.00000000e+00,2.39709697e+01], [  0.00000000e+00,0.00000000e+00,-1.00000000e+00,9.41000000e+02], [ 0.00000000e+00,0.00000000e+00,0.00000000e+00,1.00000000e+00]]
+
 	self.extrinsic_cal_flag = 0 #Josh
 	self.extrinsic_cal_pixel_coord = np.float32([[0.0, 0.0],[0.0, 0.0],[0.0, 0.0]]) #Josh
 	self.extrinsic_cal_world_coord = np.float32([[-305., -305., 0.],[-305., 305.,0.],[305.0, 305.0,0.]]) #Josh
@@ -192,8 +194,7 @@ class Video():
 		self.blobs_box_pts.append(box_points)
 		cv2.drawContours(im2,[box_points],0,(255,255,255),2)
 	cv2.imwrite('contours.jpg',im2)
-	self.color_detection()
-	print 'color finish'
+	#self.color_detection()
 
     def color_detection(self, color_str = 'blue'): #Josh
 	self.blobs_box_pts_rgb_frame = []
@@ -240,7 +241,7 @@ class Video():
 		#print mask
 		kernel = np.ones((3,3),np.uint8)
 		close = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-		print centerx, centery
+		#print centerx, centery
 		#print close
 		kernel = np.ones((3,3),np.uint8)
 		close_sum = sum(map(sum, close))
@@ -249,7 +250,9 @@ class Video():
 		    cv2.imwrite('mask {}.jpg'.format(count),mask)
 		    cv2.drawContours(RGB_image,[box_points],0,(255,255,255),2)
 		    print color_str + 'found!'
-	    cv2.imwrite('color_test.jpg',RGB_image)
+		    cv2.imwrite('color_test.jpg',RGB_image)
+		    return [centerx, centery], angle_yoverx
+	    
 	    
 	else:    
 	    for color_idx in range(len(self.hsv_colors)):
@@ -257,7 +260,7 @@ class Video():
 		    continue
 		upper_bound = np.array(self.hsv_upper_hsv[color_idx])
 		lower_bound = np.array(self.hsv_lower_hsv[color_idx])
-		print lower_bound[0],upper_bound[0]
+		#print lower_bound[0],upper_bound[0]
 		count = 0
 		for box_points in self.blobs_box_pts_rgb_frame:
 		    count += 1
@@ -279,17 +282,19 @@ class Video():
 		    #print mask
 		    kernel = np.ones((3,3),np.uint8)
 		    close = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-		    print centerx, centery
+		    #print centerx, centery
 		    #print close
 		    kernel = np.ones((3,3),np.uint8)
 		    close_sum = sum(map(sum, close))
-		    if close_sum >= 255*49*0.6:
+		    if close_sum >= 255*49*0.5:
 		        #cv2.imwrite('opening {}.jpg'.format(count),close)
 		        #cv2.imwrite('mask {}.jpg'.format(count),mask)
 			cv2.drawContours(RGB_image,[box_points],0,(255,255,255),2)
 			print color_str + 'found!'
-	    cv2.imwrite('color_test.jpg',RGB_image)
+			cv2.imwrite('color_test.jpg',RGB_image)
+			return [centerx, centery], angle_yoverx
 
+	
 
 
 
