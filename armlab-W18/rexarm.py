@@ -24,13 +24,13 @@ class Rexarm():
         """ TODO: modify this class to add functionality you need """
 
         """ Commanded Values """
-        self.num_joints = 4                         # number of motors, increase when adding gripper
+        self.num_joints = 4                         #Giri #number of motors, increase when adding gripper
         self.joint_angles = [0.0] * self.num_joints # radians
         
         # you must change this to an array to control each joint speed separately 
-        self.speed = [1.0, 1.0, 1.0, 1.0]                         # 0 to 1
-        self.max_torque = [1.0, 1.0, 1.0, 1.0]                    # 0 to 1
-        self.speed_multiplier = 0.5
+        self.speed = 1.0        #Giri 
+        self.max_torque = [1.0] * self.num_joints     #Giri, 1.0, 1.0, 1.0]                    # 0 to 1
+        self.speed_multiplier = [0.5]* self.num_joints
         self.torque_multiplier = 0.5
 
         """ Feedback Values """
@@ -64,7 +64,8 @@ class Rexarm():
             cmd = dynamixel_command_t()
             cmd.utime = int(time.time() * 1e6)
             cmd.position_radians = self.joint_angles[i]
-            cmd.speed = self.speed_multiplier * self.speed[i]
+	    #print self.speed_multiplier
+            cmd.speed = self.speed_multiplier[i] * self.speed
             cmd.max_torque = self.torque_multiplier * self.max_torque[i]
             msg.commands.append(cmd)
         self.lc.publish("DXL_COMMAND",msg.encode())
@@ -116,16 +117,28 @@ class Rexarm():
             self.load_fb[i] = msg.statuses[i].load 
             self.temp_fb[i] = msg.statuses[i].temperature
 
-    def clamp(self):
+    def clamp(self): # Giri
         """
         TODO: implement this function
 
         Clamp Function
         Limit the commanded joint angles to ones physically possible 
         so the arm is not damaged.
-        """
-        pass
+	joint_angles[0] - Base, [1] - Shoulder , [2] -Arm, [3] - Wrist
+	"""
+        
+	
+	low_limit = [-175, -120, -120, -100]#[-175, -120, -120, -120] #[-179, -122.59, -122.59, -128.61]
+	up_limit = [175, 125, 120, 100]#[175, 125, 120, 125]#[179, 128.04, 121.36, 128.61]
+	for i in range(0,4):
+		if self.joint_angles[i] > up_limit[i]*D2R:
+			self.joint_angles[i] = up_limit[i]*D2R
+			print "upper clamp motor " + str(i)
+		elif self.joint_angles[i] < low_limit[i]*D2R:
+			self.joint_angles[i] = low_limit[i]*D2R
+			print "lower clamp motor " + str(i)
 
+	 
     def rexarm_FK(dh_table, link):
         """
         TODO: implement this function
