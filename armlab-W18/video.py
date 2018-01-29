@@ -52,14 +52,15 @@ class Video():
 	self.intrinsic = np.empty((3,3)) #Josh
 	self.inv_extrinsic = np.empty((4,4)) #Josh
 	self.extrinsic = np.empty((4,4)) #Josh
-	self.extrinsic = [[  9.99535508e-01,-3.04757091e-02, 0.00000000e+00,3.45695419e+01], [ -3.04757091e-02,-9.99535508e-01,0.00000000e+00,2.39709697e+01], [  0.00000000e+00,0.00000000e+00,-1.00000000e+00,9.41000000e+02], [ 0.00000000e+00,0.00000000e+00,0.00000000e+00,1.00000000e+00]]
+	#self.extrinsic = np.array(self.getcaldata())
+	#self.inv_extrinsic = np.array(np.linalg.inv(self.extrinsic))
 
 	self.extrinsic_cal_flag = 0 #Josh
 	self.extrinsic_cal_pixel_coord = np.float32([[0.0, 0.0],[0.0, 0.0],[0.0, 0.0]]) #Josh
 	self.extrinsic_cal_world_coord = np.float32([[-305., -305., 0.],[-305., 305.,0.],[305.0, 305.0,0.]]) #Josh
  	self.levels_mm = np.float32([0., 19.25, 57.5, 96.25, 134.75, 173.25, 211.75, 250.25])
-	self.levels_lower_d = np.float32([716,697,680,659,637,615,586,557,530])
-	self.levels_upper_d = np.float32([726,715,696,679,658,636,614,585,556])
+	self.levels_lower_d = np.float32([716,705,687,668,648,624,598,570,538])#np.float32([716,697,680,659,637,615,586,557,530])
+	self.levels_upper_d = np.float32([726,708,692,675,653,630,604,575,543])#np.float32([726,715,696,679,658,636,614,585,556])
 	self.depth_image_min_row = 0
 	self.depth_image_max_row = 0
 	self.depth_image_min_col = 0
@@ -133,6 +134,27 @@ class Video():
         except:
             return None
 
+    def getcaldata(self):
+	file = open("excal.csv", "r")
+	data = file.read();
+	lines = data.splitlines();
+	A = np.zeros([4,4])
+	n = len(lines)
+	if(n==4):
+		for i in range(0,n):
+			A[i] = map(float, lines[i].split(","));
+		
+	return A
+
+    def writecaldata(self,A):
+	data = ""
+	for y in A :
+		data = data + ','.join(str(z) for z in y) + "\n"
+	file = open("excal.csv", "w")
+	file.write(data)
+	file.close()
+	
+
 
     def loadCalibration(self):
         """
@@ -194,7 +216,8 @@ class Video():
 		self.blobs_box_pts.append(box_points)
 		cv2.drawContours(im2,[box_points],0,(255,255,255),2)
 	cv2.imwrite('contours.jpg',im2)
-	#self.color_detection()
+	#self.color_detection("red")
+	#print "color finished!"
 
     def color_detection(self, color_str = 'blue'): #Josh
 	self.blobs_box_pts_rgb_frame = []
@@ -214,10 +237,10 @@ class Video():
 	    #cv2.drawContours(test_hsv,[box_pts_rgb],0,(255,255,255),2)
 	#cv2.imwrite('color_test.jpg',test_hsv)
 	if color_str == 'red':
-	    upper_bound1 = np.array([180.,255.,185.])
-	    lower_bound1 = np.array([170.,175.,80.])
-	    upper_bound2 = np.array([5.,255.,180.])
-	    lower_bound2 = np.array([0.,175.,80.])
+	    upper_bound1 = np.array([180.,255.,195.])
+	    lower_bound1 = np.array([170.,120.,80.])
+	    upper_bound2 = np.array([5.,255.,190.])
+	    lower_bound2 = np.array([0.,120.,80.])
 	    count = 0
 	    for box_points in self.blobs_box_pts_rgb_frame:
 		count += 1
@@ -227,7 +250,6 @@ class Video():
 		centery = np.int0((pt1[0] + pt3[0])/2)
 		#centerx = 346
 		#centery = 350
-		#self.blobs_center_rgb.append([centerx,centery])
 		angle_yoverx = np.arctan2((pt1[1] - pt3[1]),(pt1[0] - pt3[0]))
 		#cv2.circle(test_hsv,(centerx, centery), 2, (255,255,255), -1)
 	    #cv2.imwrite('test_center.jpg',test_hsv)
