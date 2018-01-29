@@ -24,7 +24,7 @@ class Rexarm():
         """ TODO: modify this class to add functionality you need """
 
         """ Commanded Values """
-        self.num_joints = 4                         #Giri #number of motors, increase when adding gripper
+        self.num_joints = 6                         #Giri #number of motors, increase when adding gripper
         self.joint_angles = [0.0] * self.num_joints # radians
         
         # you must change this to an array to control each joint speed separately 
@@ -126,18 +126,18 @@ class Rexarm():
         so the arm is not damaged.
 	joint_angles[0] - Base, [1] - Shoulder , [2] -Arm, [3] - Wrist
 	"""
-        
-	
+        pass
+	"""
 	low_limit = [-175, -120, -120, -100]#[-175, -120, -120, -120] #[-179, -122.59, -122.59, -128.61]
 	up_limit = [175, 125, 120, 100]#[175, 125, 120, 125]#[179, 128.04, 121.36, 128.61]
 	for i in range(0,4):
 		if self.joint_angles[i] > up_limit[i]*D2R:
+			print "upper clamp motor " + str(i) + "Can't go to: " + str(self.joint_angles[i])
 			self.joint_angles[i] = up_limit[i]*D2R
-			print "upper clamp motor " + str(i)
 		elif self.joint_angles[i] < low_limit[i]*D2R:
+			print "lower clamp motor " + str(i) + "Can't go to: " + str(self.joint_angles[i])
 			self.joint_angles[i] = low_limit[i]*D2R
-			print "lower clamp motor " + str(i)
-
+	"""		
 	 
     def rexarm_FK(dh_table, link):
         """
