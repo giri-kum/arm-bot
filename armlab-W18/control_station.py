@@ -19,7 +19,12 @@ MAX_X = 950
 
 MIN_Y = 30
 MAX_Y = 510
- 
+
+putx = 0.0
+puty = 0.0
+putz = 0.0
+putangle = 0.0
+
 class Gui(QtGui.QMainWindow):
     """ 
     Main GUI Class
@@ -35,7 +40,8 @@ class Gui(QtGui.QMainWindow):
         self.rex = Rexarm()
         self.video = Video()
         self.statemachine = Statemachine()
-
+	#self.video.extrinsic = np.array(self.video.getcaldata())
+	#self.video.inv_extrinsic = np.array(np.linalg.inv(self.video.extrinsic))
         """ Other Variables """
         self.last_click = np.float32([0,0])
 
@@ -59,6 +65,15 @@ class Gui(QtGui.QMainWindow):
         self._timer2.timeout.connect(self.rex.get_feedback)
         self._timer2.start()
 
+	"""
+	Giri - Statemachine timer
+	"""
+	self.statemachine.setme(self.ui,self.rex)
+        self._timer3 = QtCore.QTimer(self)
+        self._timer3.timeout.connect(self.statemachine.timerCallback)
+        self._timer3.start(100)  # frequency of the timer is set by this. it is 100 ms now. However, the time.now can give microseconds precision not just millisecond
+	
+	
         """ 
         Connect Sliders to Function
         TODO: CONNECT THE OTHER 5 SLIDERS IMPLEMENTED IN THE GUI 
@@ -76,7 +91,7 @@ class Gui(QtGui.QMainWindow):
 	
         """ Initial command of the arm to home position"""
         self.sliderChange() 
-        
+        self.reset()
         """ Connect Buttons to Functions 
         TODO: NAME AND CONNECT BUTTONS AS NEEDED
         """
@@ -97,8 +112,8 @@ class Gui(QtGui.QMainWindow):
 	self.ui.btnUser6.setText("Place Block")
 	self.ui.btnUser6.clicked.connect(self.place)
 
-	self.ui.btnUser7.setText("Draw")
-	self.ui.btnUser7.clicked.connect(self.teach) #Giri
+	self.ui.btnUser7.setText("Reset")
+	self.ui.btnUser7.clicked.connect(self.reset) #Giri
 	self.ui.btnUser8.setText("Enter Competition")
 	self.ui.btnUser8.clicked.connect(self.teach) #Giri
 
@@ -176,11 +191,11 @@ class Gui(QtGui.QMainWindow):
         self.ui.rdoutZ.setText(str("%2f" %(round(endCoord[2],2)) ) )
         self.ui.rdoutT.setText(str("%2f" %(round(endCoord[3],2)) ) )
 	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
-	angles[0] = round(self.trim_angle(angles[0]),2)
-	angles[1] = round(self.trim_angle(angles[1]),2)	
-	angles[2] = round(self.trim_angle(angles[2]),2)
-	angles[3] = round(self.trim_angle(angles[3]),2)
+	#angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	#angles[0] = round(self.trim_angle(angles[0]),2)
+	#angles[1] = round(self.trim_angle(angles[1]),2)	
+	#angles[2] = round(self.trim_angle(angles[2]),2)
+	#angles[3] = round(self.trim_angle(angles[3]),2)
 	#print angles
         """ 
         Mouse position presentation in GUI
@@ -250,6 +265,9 @@ class Gui(QtGui.QMainWindow):
         self.rex.joint_angles[1] = self.ui.sldrShoulder.value()*D2R
         self.rex.joint_angles[2] = self.ui.sldrElbow.value()*D2R
         self.rex.joint_angles[3] = self.ui.sldrWrist.value()*D2R
+	self.rex.joint_angles[4] = self.ui.sldrWrist.value()*D2R
+	self.rex.joint_angles[5] = self.ui.sldrWrist.value()*D2R
+              
         self.rex.cmd_publish()
 
     def sliderinitChange(self): #Giri  
@@ -426,6 +444,7 @@ class Gui(QtGui.QMainWindow):
 		T = np.transpose(np.array([-1.0*np.dot(R,T)]))
 		tmp = np.concatenate((R,T),axis=1)
 		self.video.extrinsic = np.concatenate((tmp, np.float32([[0., 0., 0., 1.]])),axis = 0)
+		#self.video.writecaldata(self.video.extrinsic)
 		self.video.inv_extrinsic = np.linalg.inv(self.video.extrinsic)
 		print self.video.extrinsic
 		self.video.extrinsic_cal_flag = 2
@@ -451,26 +470,30 @@ class Gui(QtGui.QMainWindow):
 	self.video.extrinsic_cal_flag = 1
 
     def pick(self): #Josh
+	global putx, puty, putz, putangle
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
 	print [blockx, blocky, blockz, angle]
-	endCoord = [blockx/10.0, blocky/10.0, (blockz+30)/10.0, 90]
+	[putx, puty, putz, putangle] = [blockx, -1*blocky, blockz, angle]
+	#endCoord = [25, 25, 12.7, 0]
+	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, 90]	
+	#print "endcoord:"
+	#print endCoord
 	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
-	print "endcoord:"
-	print endCoord
+	#print "angles:"
+	#print angle
 	angles[0] = round(self.trim_angle(angles[0]),2)
 	angles[1] = round(self.trim_angle(angles[1]),2)	
 	angles[2] = round(self.trim_angle(angles[2]),2)
 	angles[3] = round(self.trim_angle(angles[3]),2)
-	
- 	self.rex.joint_angles[0] = angles[0]*D2R
-        self.rex.joint_angles[1] = angles[1]*D2R
-        self.rex.joint_angles[2] = angles[2]*D2R
-        self.rex.joint_angles[3] = angles[3]*D2R
- 	self.rex.cmd_publish()
-    	
- 
+	self.statemachine.hold(self.ui,self.rex, angles,"picking")
     def place(self):
-	pass
+	
+	print [putx, puty, putz, putangle]
+	endCoord = [putx/10, puty/10, (putz+40)/10, 90]	
+	#print "endcoord:"
+	#print endCoord
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])		
+	self.statemachine.hold(self.ui,self.rex, angles,"placing")
     
     def get_color_block_world_coord(self,color): #Josh
 	self.video.blockDetector()
@@ -504,6 +527,24 @@ class Gui(QtGui.QMainWindow):
 	
     def srepeat(self): #Giri
 	self.statemachine.init(self.ui,self.rex,"initialising")
+
+    def reset(self, hold = False):
+	self.rex.torque_multiplier =self.ui.sldrMaxTorque.value()/100.0
+        self.rex.speed_multiplier = [self.ui.sldrSpeed.value()/100.0]*self.rex.num_joints
+        
+	self.rex.joint_angles[0] = 0.0
+        self.rex.joint_angles[1] = 0.0
+        self.rex.joint_angles[2] = 0.0
+        self.rex.joint_angles[3] = 0.0
+	if(len(self.rex.joint_angles) == 6 and hold==False):	
+		self.rex.joint_angles[4] = 0.0
+        	self.rex.joint_angles[5] = 95*D2R
+     	elif(len(self.rex.joint_angles) == 6 and hold==True):	
+		self.rex.joint_angles[4] = 0.0
+        	self.rex.joint_angles[5] = -95*D2R
+     
+	self.rex.cmd_publish()
+	
     	
 """main function"""
 def main():
