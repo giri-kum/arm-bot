@@ -12,6 +12,10 @@ current_state = "idle"
 past_state = "idle"
 goal_angles = [0.0]*4	
 picking = "True"
+mode ="normal" #competition1 or or normal
+wrist_orientation = 0.0
+gripper_orientation = 180.0
+
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
 	if(usec):
@@ -42,10 +46,29 @@ def trim_angle(q):
 
 class Statemachine():
     timerCallback = functools.partial(gen_timestamp)
+    def setorientation(self, w_orient, g_orient=gripper_orientation,gripper=False):
+	global wrist_orientation, gripper_orientation
+	wrist_orientation = w_orient
+	if(gripper):
+		gripper_orientation = g_orient
+		
+    def setmode(self,set_mode):
+	global mode
+	if(set_mode== "normal" or set_mode=="competition"):
+		mode = set_mode
+	else: 
+		print "Invalid mode"
 
     def setme(self, ui, rex):
 	self.timerCallback = functools.partial(self.statemachine_check, ui = ui ,rex = rex)
-   	
+   
+    def setgoal(self,angles):
+	global goal_angles
+	goal_angles[0] = angles[0]
+	goal_angles[1] = angles[1]
+	goal_angles[2] = angles[2]
+	goal_angles[3] = angles[3]
+	
     def idle(self,rex):
 	global current_state	
 	current_state = "idle"
@@ -78,23 +101,23 @@ class Statemachine():
 							if(isclose(rex.joint_angles[5]*R2D,rex.joint_angles_fb[5]*R2D,atol)):
 								return True
 							else:
-								#print "motor 5 fails" + str(abs(rex.joint_angles[5]*R2D-rex.joint_angles_fb[5]*R2D))
+								#print "motor 5 fails" + str(abs(rex.joint_angles[5]*R2D-rex.joint_angles_fb[5]*R2D)) + "angles are: " + str(rex.joint_angles[5]*R2D) + str(rex.joint_angles_fb[5]*R2D)
 								return False
 						else:
-							#print "motor 4 fails" + str(abs(rex.joint_angles[4]*R2D-rex.joint_angles_fb[4]*R2D))
+							#print "motor 4 fails" + str(abs(rex.joint_angles[4]*R2D-rex.joint_angles_fb[4]*R2D)) + "angles are: " + str(rex.joint_angles[4]*R2D) + str(rex.joint_angles_fb[4]*R2D)
 							return False
 							
 				else:
-					#print "motor 3 fails" + str(abs(rex.joint_angles[3]*R2D-rex.joint_angles_fb[3]*R2D))
+					#print "motor 3 fails" + str(abs(rex.joint_angles[3]*R2D-rex.joint_angles_fb[3]*R2D)) + "angles are: " + str(rex.joint_angles[3]*R2D) + str(rex.joint_angles_fb[3]*R2D)
 					return False
 			else:
-				#print "motor 2 fails" + str(abs(rex.joint_angles[2]*R2D-rex.joint_angles_fb[2]*R2D))
+				#print "motor 2 fails" + str(abs(rex.joint_angles[2]*R2D-rex.joint_angles_fb[2]*R2D)) + "angles are: " + str(rex.joint_angles[2]*R2D) + str(rex.joint_angles_fb[2]*R2D)
 				return False
 		else:
-			#print "motor 1 fails" + str(abs(rex.joint_angles[1]*R2D-rex.joint_angles_fb[1]*R2D))
+			#print "motor 1 fails" + str(abs(rex.joint_angles[1]*R2D-rex.joint_angles_fb[1]*R2D)) + "angles are: " + str(rex.joint_angles[1]*R2D) + str(rex.joint_angles_fb[1]*R2D)
 			return False
 	else:
-		#print "motor 0 fails " + str(abs(rex.joint_angles[0]*R2D-rex.joint_angles_fb[0]*R2D))
+		#print "motor 0 fails " + str(abs(rex.joint_angles[0]*R2D-rex.joint_angles_fb[0]*R2D)) + "angles are: " + str(rex.joint_angles[0]*R2D) + str(rex.joint_angles_fb[0]*R2D)
 		return False 	
 
     
@@ -104,38 +127,79 @@ class Statemachine():
 	if(current_state != past_state):
 		print current_state
 		past_state = current_state
+	"""
+	if(current_state == "basefirst"):
+		if(self.checkmotors(rex)):
+			self.reach(ui,rex)
+	"""	
 	
 	if(current_state == "holding"):
 		if(self.checkmotors(rex)):
 			self.reach(ui,rex)
-	
-	if(current_state == "picking" or current_state == "placing"):
+
+		
+	if(current_state == "picking" or current_state == "placing" or current_state == "shoulderlast picking" or current_state == "shoulderlast placing"):
 		if(self.checkmotors(rex)):
 			#print "reached " + current_state
 			if(current_state=="picking"):
 				self.close(rex)
 			elif(current_state=="placing"):
 				self.open(rex)
+			elif(current_state=="shoulderlast placing" or current_state=="shoulderlast picking"):
+				self.shoulderlast(rex)
 			else:
 				pass#print "stupid"
 		else:
 			pass#print "not reached yet"
-	elif(current_state == "opening" or current_state == "closing"):
+	
+	elif(current_state == "closing"):
 		if(self.checkmotors(rex)):
-			self.idle(rex)
+			if(mode=="competition"):
+				self.hold(ui,rex,[-1*goal_angles[0],goal_angles[1],goal_angles[2],goal_angles[3]],"placing")
+			else:
+				self.idle(rex)		
+	
+	elif(current_state == "opening"):
+		if(self.checkmotors(rex)):
+				self.idle(rex)
 
     def reach(self,ui,rex):
 	global current_state
 	rex.joint_angles[0] = goal_angles[0]*D2R
-        rex.joint_angles[1] = goal_angles[1]*D2R
-        rex.joint_angles[2] = goal_angles[2]*D2R
-        rex.joint_angles[3] = goal_angles[3]*D2R	 
-        if(picking):
-		current_state = "picking"
+	rex.joint_angles[2] = goal_angles[2]*D2R
+        rex.joint_angles[3] = goal_angles[3]*D2R	 	
+	rex.joint_angles[4] = wrist_orientation
+	if(abs(goal_angles[0])>90):
+		if(picking):
+			current_state = "shoulderlast picking"
+		else:
+			current_state = "shoulderlast placing"	
 	else:
-		current_state = "placing"
+	        rex.joint_angles[1] = goal_angles[1]*D2R  
+		if(picking):
+			current_state = "picking"
+		else:
+			current_state = "placing"
+		
     	rex.cmd_publish()
+
+    def basefirst(self,rex):
+	global current_state
+	rex.joint_angles[0] = goal_angles[0]*D2R
+	current_state = "basefirst"
+	rex.cmd_publish()
+
+    def shoulderlast(self,rex):
+	global current_state
+	rex.joint_angles[1] = goal_angles[1]*D2R
+	if(current_state=="shoulderlast picking"):
+		current_state = "picking"	
+	elif(current_state=="shoulderlast placing"):	
+		current_state = "placing"
+	rex.cmd_publish()
 	
+   
+
     def close(self,rex):
 	global current_state
 	#print "Hello from pick"
