@@ -24,6 +24,7 @@ putx = 0.0
 puty = 0.0
 putz = 0.0
 putangle = 0.0
+gripper_orientation = 180.0
 
 class Gui(QtGui.QMainWindow):
     """ 
@@ -114,8 +115,8 @@ class Gui(QtGui.QMainWindow):
 
 	self.ui.btnUser7.setText("Reset")
 	self.ui.btnUser7.clicked.connect(self.reset) #Giri
-	self.ui.btnUser8.setText("Enter Competition")
-	self.ui.btnUser8.clicked.connect(self.teach) #Giri
+	self.ui.btnUser8.setText("Enter Competition 1")
+	self.ui.btnUser8.clicked.connect(self.competition1) #Giri
 
 
 		
@@ -473,9 +474,11 @@ class Gui(QtGui.QMainWindow):
 	global putx, puty, putz, putangle
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
 	print [blockx, blocky, blockz, angle]
-	[putx, puty, putz, putangle] = [blockx, -1*blocky, blockz, angle]
+	#self.statemachine.setorientation(angle*R2D)
+
+	[putx, puty, putz, putangle] = [-1*blockx, blocky, blockz, angle]
 	#endCoord = [25, 25, 12.7, 0]
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, 90]	
+	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
 	#print "endcoord:"
 	#print endCoord
 	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
@@ -489,10 +492,14 @@ class Gui(QtGui.QMainWindow):
     def place(self):
 	
 	print [putx, puty, putz, putangle]
-	endCoord = [putx/10, puty/10, (putz+40)/10, 90]	
+	endCoord = [putx/10, puty/10, (putz+40)/10, gripper_orientation]	
 	#print "endcoord:"
 	#print endCoord
 	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])		
+	angles[0] = round(self.trim_angle(angles[0]),2)
+	angles[1] = round(self.trim_angle(angles[1]),2)	
+	angles[2] = round(self.trim_angle(angles[2]),2)
+	angles[3] = round(self.trim_angle(angles[3]),2)
 	self.statemachine.hold(self.ui,self.rex, angles,"placing")
     
     def get_color_block_world_coord(self,color): #Josh
@@ -524,7 +531,6 @@ class Gui(QtGui.QMainWindow):
 	else:
 		self.statemachine.repeat(self.ui,self.rex, False) #Giri
 	
-	
     def srepeat(self): #Giri
 	self.statemachine.init(self.ui,self.rex,"initialising")
 
@@ -545,7 +551,23 @@ class Gui(QtGui.QMainWindow):
      
 	self.rex.cmd_publish()
 	
-    	
+    def competition1(self):    	
+	colors = ['red', 'blue', 'green']	
+	blockx, blocky, blockz, angle = self.get_color_block_world_coord(colors[0])
+	[putx, puty, putz, putangle] = [-1*blockx, blocky, blockz, angle]
+	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
+	#print "endcoord:"
+	#print endCoord
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	#print "angles:"
+	#print angle
+	angles[0] = round(self.trim_angle(angles[0]),2)
+	angles[1] = round(self.trim_angle(angles[1]),2)	
+	angles[2] = round(self.trim_angle(angles[2]),2)
+	angles[3] = round(self.trim_angle(angles[3]),2)
+	self.statemachine.setmode("competition")
+	self.statemachine.hold(self.ui,self.rex, angles,"picking")
+	
 """main function"""
 def main():
     app = QtGui.QApplication(sys.argv)
