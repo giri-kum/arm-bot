@@ -24,7 +24,7 @@ putx = 0.0
 puty = 0.0
 putz = 0.0
 putangle = 0.0
-gripper_orientation = 180.0
+gripper_orientation = 90.0
 
 class Gui(QtGui.QMainWindow):
     """ 
@@ -87,9 +87,13 @@ class Gui(QtGui.QMainWindow):
         self.ui.sldrGrip2.valueChanged.connect(self.sliderGrip2Change)        #Giri        
 	self.ui.sldrMaxTorque.valueChanged.connect(self.sliderOtherChange)        #Giri
         self.ui.sldrSpeed.valueChanged.connect(self.sliderOtherChange)        #Giri        
-	self.ui.sldrGrip1.setEnabled(True) #Giri
-	self.ui.sldrGrip2.setEnabled(True) #Giri
-	
+	if(self.rex.num_joints==6):		
+		self.ui.sldrGrip1.setEnabled(True) #Giri
+		self.ui.sldrGrip2.setEnabled(True) #Giri
+	else:
+		self.ui.sldrGrip1.setEnabled(False) #Giri
+		self.ui.sldrGrip2.setEnabled(False) #Giri
+		
         """ Initial command of the arm to home position"""
         self.sliderChange() 
         self.reset()
@@ -97,37 +101,43 @@ class Gui(QtGui.QMainWindow):
         TODO: NAME AND CONNECT BUTTONS AS NEEDED
         """
         self.ui.btnUser1.setText("Configure Servos")
-        self.ui.btnUser1.clicked.connect(self.rex.cfg_publish_default)
-        self.ui.btnUser12.setText("Emergency Stop!")
+        self.ui.btnUser1.clicked.connect(self.btn1) #Giri
+
+	self.ui.btnUser2.setText("Depth and RGB Calibration")
+	self.ui.btnUser2.clicked.connect(self.btn2) #Giri
+
+        self.ui.btnUser3.setText("Extrinsic Calibration") #Giri
+	self.ui.btnUser3.clicked.connect(self.btn3)
+
+	self.ui.btnUser4.setText("Block Detector") #Giri
+	self.ui.btnUser4.clicked.connect(self.btn4)
+
+	self.ui.btnUser5.setText("Repeat")
+	self.ui.btnUser5.clicked.connect(self.btn5) #Giri
+	
+	self.ui.btnUser6.setText("Teach")
+	self.ui.btnUser6.clicked.connect(self.teach) #Giri
+
+        self.ui.btnUser7.setText("Smooth Repeat")
+	self.ui.btnUser7.clicked.connect(self.srepeat) #Giri        
+	self.ui.btnUser7.setEnabled(False) #Giri			
+
+	self.ui.btnUser8.setText("Pick Block")
+	self.ui.btnUser8.clicked.connect(self.pick)
+
+	self.ui.btnUser9.setText("Place Block")
+	self.ui.btnUser9.clicked.connect(self.place)
+	
+	self.ui.btnUser10.setText("Reset")
+	self.ui.btnUser10.clicked.connect(self.reset) #Giri
+
+	self.ui.btnUser11.setText("Enter Competition Mode")
+	self.ui.btnUser11.clicked.connect(self.competition) #Giri	
+
+	self.ui.btnUser12.setText("Emergency Stop!")
         self.ui.btnUser12.clicked.connect(self.estop)
 
 
-	self.ui.btnUser2.setText("Depth and RGB Calibration")
-	self.ui.btnUser2.clicked.connect(self.deprgb_cali) #Josh
-        self.ui.btnUser3.setText("Extrinsic Calibration") #Josh
-	self.ui.btnUser3.clicked.connect(self.extrinsic_cali)
-	self.ui.btnUser4.setText("Block Detector") #Josh
-	self.ui.btnUser4.clicked.connect(self.video.blockDetector)
-	self.ui.btnUser5.setText("Pick Block")
-	self.ui.btnUser5.clicked.connect(self.pick)
-	self.ui.btnUser6.setText("Place Block")
-	self.ui.btnUser6.clicked.connect(self.place)
-
-	self.ui.btnUser7.setText("Reset")
-	self.ui.btnUser7.clicked.connect(self.reset) #Giri
-	self.ui.btnUser8.setText("Enter Competition 1")
-	self.ui.btnUser8.clicked.connect(self.competition1) #Giri
-
-
-		
-	self.ui.btnUser9.setText("Teach")
-	self.ui.btnUser9.clicked.connect(self.teach) #Giri
-        self.ui.btnUser10.setText("Repeat")
-	self.ui.btnUser10.clicked.connect(self.repeat) #Giri
-	self.ui.btnUser11.setText("Smooth Repeat")
-	self.ui.btnUser11.clicked.connect(self.srepeat) #Giri        
-	self.ui.btnUser11.setEnabled(False) #Giri			
-	
 
     def estop(self):
         self.statemachine.estop(self.rex)
@@ -252,6 +262,9 @@ class Gui(QtGui.QMainWindow):
         if(self.rex.plan_status == 1):
             self.ui.rdoutStatus.setText("Playing Back - Waypoint %d"
                                     %(self.rex.wpt_number + 1))
+	self.ui.rdoutStatus.setText(self.statemachine.getmestatus(combined=True))
+        
+
 
     def sliderChange(self):
         """ 
@@ -266,9 +279,10 @@ class Gui(QtGui.QMainWindow):
         self.rex.joint_angles[1] = self.ui.sldrShoulder.value()*D2R
         self.rex.joint_angles[2] = self.ui.sldrElbow.value()*D2R
         self.rex.joint_angles[3] = self.ui.sldrWrist.value()*D2R
-	self.rex.joint_angles[4] = self.ui.sldrWrist.value()*D2R
-	self.rex.joint_angles[5] = self.ui.sldrWrist.value()*D2R
-              
+	if(self.rex.num_joints==6):	
+		self.rex.joint_angles[4] = self.ui.sldrWrist.value()*D2R
+		self.rex.joint_angles[5] = self.ui.sldrWrist.value()*D2R
+		      
         self.rex.cmd_publish()
 
     def sliderinitChange(self): #Giri  
@@ -469,64 +483,14 @@ class Gui(QtGui.QMainWindow):
 	self.video.intrinsic = np.float32([[alpha, 0., u0],[0., beta, v0],[0., 0., 1.]])
 	self.video.distortion_array = np.float32([2.45479098e-01,-8.27672136e-01, 1.05870966e-03, -3.01947277e-03,1.08683931e+00])
 	self.video.extrinsic_cal_flag = 1
-
-    def pick(self): #Josh
-	global putx, puty, putz, putangle
-	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
-	print [blockx, blocky, blockz, angle]
-	#self.statemachine.setorientation(angle*R2D)
-
-	[putx, puty, putz, putangle] = [-1*blockx, blocky, blockz, angle]
-	#endCoord = [25, 25, 12.7, 0]
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
-	#print "endcoord:"
-	#print endCoord
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
-	#print "angles:"
-	#print angle
-	angles[0] = round(self.trim_angle(angles[0]),2)
-	angles[1] = round(self.trim_angle(angles[1]),2)	
-	angles[2] = round(self.trim_angle(angles[2]),2)
-	angles[3] = round(self.trim_angle(angles[3]),2)
-	self.statemachine.hold(self.ui,self.rex, angles,"picking")
-    def place(self):
-	
-	print [putx, puty, putz, putangle]
-	endCoord = [putx/10, puty/10, (putz+40)/10, gripper_orientation]	
-	#print "endcoord:"
-	#print endCoord
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])		
-	angles[0] = round(self.trim_angle(angles[0]),2)
-	angles[1] = round(self.trim_angle(angles[1]),2)	
-	angles[2] = round(self.trim_angle(angles[2]),2)
-	angles[3] = round(self.trim_angle(angles[3]),2)
-	self.statemachine.hold(self.ui,self.rex, angles,"placing")
-    
-    def get_color_block_world_coord(self,color): #Josh
-	self.video.blockDetector()
-	[blockx_rgb, blocky_rgb], angle = self.video.color_detection(color)
-	xy_in_rgb = np.float32([[[blocky_rgb,blockx_rgb]]]) #Josh
-	xy_in_rgb_homogenous = np.array([blocky_rgb,blockx_rgb,1.0])
-	xy_in_dep = np.dot(self.video.rgb2dep_aff_matrix, xy_in_rgb_homogenous) #Josh
-	x_dep = int(xy_in_dep[0]) #Josh
-	y_dep = int(xy_in_dep[1]) #Josh
-        d = self.video.currentDepthFrame[y_dep][x_dep]
-	Z = -1
-	for idx in range(len(self.video.levels_mm)):
-	    if d <=self.video.levels_upper_d[idx] and d>=self.video.levels_lower_d[idx]:
-		Z = 941 - self.video.levels_mm[idx]
-		break
-	camera_coord = Z*cv2.undistortPoints(xy_in_rgb,self.video.intrinsic,self.video.distortion_array)
-	camera_coord_homogenous = np.transpose(np.append(camera_coord,[Z,1.0]))
-	world_coord_homogenous = np.dot(self.video.extrinsic, camera_coord_homogenous)
-	return world_coord_homogenous[0], world_coord_homogenous[1], world_coord_homogenous[2], angle
+	  
 
 
     def teach(self): #Giri
         self.statemachine.teach(self.ui,self.rex) #Giri
         	
     def repeat(self): #Giri
-	if(self.ui.btnUser5.text() == "Repeat"):
+	if(self.ui.btnUser7.text() == "Repeat"):
 		self.statemachine.init(self.ui,self.rex,"Initialising")	
 	else:
 		self.statemachine.repeat(self.ui,self.rex, False) #Giri
@@ -550,14 +514,20 @@ class Gui(QtGui.QMainWindow):
         	self.rex.joint_angles[5] = -95*D2R
      
 	self.rex.cmd_publish()
-	
-    def competition1(self):    	
-	colors = ['red', 'blue', 'green']	
-	blockx, blocky, blockz, angle = self.get_color_block_world_coord(colors[0])
+
+
+    def pick(self): #Josh
+	global putx, puty, putz, putangle
+	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
+	print [blockx, blocky, blockz, angle]
+	#self.statemachine.setorientation(angle*R2D)
+
 	[putx, puty, putz, putangle] = [-1*blockx, blocky, blockz, angle]
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
-	#print "endcoord:"
-	#print endCoord
+	#endCoord = [20.2, -16.1, 4.4,90]
+	#endCoord = [14.3, 19.4, 4.4,90]
+	endCoord = [blockx/10, blocky/10, (blockz+44)/10, gripper_orientation]		
+	print "endcoord:"
+	print endCoord
 	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
 	#print "angles:"
 	#print angle
@@ -565,9 +535,78 @@ class Gui(QtGui.QMainWindow):
 	angles[1] = round(self.trim_angle(angles[1]),2)	
 	angles[2] = round(self.trim_angle(angles[2]),2)
 	angles[3] = round(self.trim_angle(angles[3]),2)
-	self.statemachine.setmode("competition")
-	self.statemachine.hold(self.ui,self.rex, angles,"picking")
+	self.statemachine.setq(angles,angles,angles)
+	self.statemachine.setmystatus("testing", "picking","picking")#mode="testing",action="picking")
+	#self.statemachine.hold(self.ui,self.rex, angles,"picking")
+    def place(self):
 	
+	print [putx, puty, putz, putangle]
+	endCoord = [putx/10, puty/10, (putz+25)/10, gripper_orientation]	
+	#print "endcoord:"
+	#print endCoord
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])		
+	angles[0] = round(self.trim_angle(angles[0]),2)
+	angles[1] = round(self.trim_angle(angles[1]),2)	
+	angles[2] = round(self.trim_angle(angles[2]),2)
+	angles[3] = round(self.trim_angle(angles[3]),2)
+	self.statemachine.setq(angles,angles,angles)
+	self.statemachine.setmystatus("testing", "placing","placing") #mode="testing",action="placing")	
+#	self.statemachine.hold(self.ui,self.rex, angles,"placing")
+
+
+
+    def competition(self):
+	if(self.ui.btnUser11.text() == "Enter Competition Mode"):
+		self.ui.btnUser11.setText("Enter Testing Mode")
+		self.ui.btnUser7.setText("Draw")
+		self.ui.btnUser1.setText("Competition 1")
+		self.ui.btnUser2.setText("Competition 2")
+		self.ui.btnUser3.setText("Competition 3")
+		self.ui.btnUser4.setText("Competition 4")
+		self.ui.btnUser5.setText("Competition 5")
+       		self.ui.btnUser7.setEnabled(True) 			
+
+	elif(self.ui.btnUser11.text() == "Enter Testing Mode"):
+		self.ui.btnUser11.setText("Enter Competition Mode")
+        	self.ui.btnUser7.setText("Smooth Repeat")
+		self.ui.btnUser1.setText("Configure Servos")
+		self.ui.btnUser2.setText("Depth and RGB Calibration")
+		self.ui.btnUser3.setText("Extrinsic Calibration")
+		self.ui.btnUser4.setText("Block Detection")
+		self.ui.btnUser5.setText("Repeat")
+
+    def btn1(self): 
+	if(self.ui.btnUser1.text()=="Configure Servos"):
+        	self.rex.cfg_publish_default()
+	elif(self.ui.btnUser1.text()=="Competition 1"):
+		self.statemachine.getangles('blue')		
+		self.statemachine.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
+		
+    def btn2(self): 
+	if(self.ui.btnUser2.text()=="Depth and RGB Calibration"):
+        	self.deprgb_cali()
+	elif(self.ui.btnUser2.text()=="Competition 2"):
+		pass
+	
+    def btn3(self): 
+	if(self.ui.btnUser3.text()=="Extrinsic Calibration"):
+        	self.extrinsic_cali()
+	elif(self.ui.btnUser3.text()=="Competition 3"):
+		pass
+	
+    def btn4(self): 
+	if(self.ui.btnUser4.text()=="Block Detector"):
+        	self.video.blockDetector()
+	elif(self.ui.btnUser4.text()=="Competition 4"):
+		pass
+	
+    def btn5(self): 
+	if(self.ui.btnUser5.text()=="Repeat"):
+        	self.repeat()
+	elif(self.ui.btnUser5.text()=="Competition 5"):
+		pass
+	
+			
 """main function"""
 def main():
     app = QtGui.QApplication(sys.argv)
