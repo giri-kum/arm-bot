@@ -80,7 +80,7 @@ class Rexarm():
             cfg = dynamixel_config_t()
             cfg.utime = int(time.time() * 1e6)
             cfg.kp = 32
-            cfg.ki = 0
+            cfg.ki = 32
             cfg.kd = 0
             cfg.compl_margin = 0
             cfg.compl_slope = 16
