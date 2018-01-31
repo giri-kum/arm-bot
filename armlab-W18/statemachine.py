@@ -14,7 +14,17 @@ current_action = "idle" #picking, placing
 current_movement = "idle" #picking, grabbing qi, grabbing q, grabbing qf, idle or placing, placing qi, placing q, placing qf  
 
 comp1_status = "idle" # idle, red, blue, green
-comp2_status = -1 # 0,1,2,
+comp2_status = "idle" # idle, red, blue, green
+comp3_status = "idle" # idle, red, blue, green
+comp4_status = "idle" # idle, red, blue, green
+comp5_status = "idle" # idle, red, blue, green
+comp1 = -1 # 0,1,2,
+comp2 = -1 # 0,1,2,
+comp3 = -1 # 0,1,2,
+comp4 = -1 # 0,1,2,
+comp5 = -1 # 0,1,2,
+
+
 past_status = ""
 past_states = [""]*4
 qi = [0.0]*6
@@ -24,7 +34,7 @@ q  = [0.0]*6
 #mode ="normal"
 wrist_orientation = 0.0
 gripper_orientation = 90.0
-q_comp2 = np.zeros([4,3])
+q_comp = np.zeros([4,3])
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
 	if(usec):
@@ -66,9 +76,9 @@ class Statemachine():
 	q  = new_q
 	qf = new_qf
 		
-    def setq_comp2(self,new_q_comp2):
-	global q_comp2
-	q_comp2 = new_q_comp2
+    def setq_comp(self,new_q_comp):
+	global q_comp
+	q_comp = new_q_comp
 
     def setme(self, ui, rex):
 	self.timerCallback = functools.partial(self.statemachine_check, ui = ui ,rex = rex)
@@ -155,7 +165,7 @@ class Statemachine():
 
     
     def statemachine_check(self, ui, rex): #running at 100 ms
-	global current_mode, current_action, current_movement, current_motorstate, past_states, comp1_status, comp2_status
+	global current_mode, current_action, current_movement, current_motorstate, past_states, comp1_status, comp2_status,comp3_status, comp4_status,comp5_status, comp1, comp2,comp3, comp4,comp5
 	past_status = past_states[0]+", "+past_states[1]+", "+ past_states[2] + ", "+ past_states[3]
 	if(current_motorstate == "motion"):
 		if(self.checkmotors(rex)):
@@ -195,28 +205,118 @@ class Statemachine():
 				self.picknplace(ui,rex)
 
 		elif(current_mode == "Competition 2"):
-			if(comp2_status == -1):
-				comp2_status = 0
+			if(comp2 == -1):
+				comp2 = 0
 			print forwardKinematics(q[0],q[1],q[2],q[3])
-			print comp2_status	
+			print comp2	
 			if(current_action=="idle"):							
-				if (comp2_status==0):
+				if (comp2==0):
 					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")					
-					comp2_status = 1
+					comp2 = 1
 					return 'red'
-				elif(comp2_status==1):
+				elif(comp2 ==1):
 					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
-					comp2_status = 2					
+					comp2 = 2					
 					return 'green'
-				elif(comp2_status == 2):
-					comp2_status = -1
+				elif(comp2 == 2):
+					comp2 = -1
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
 		elif(current_mode == "Competition 3"):
-			pass
+			if(comp3_status == "idle"):
+				comp3_status = 'blue'
+				comp3 = 0		
+			if(current_action=="idle"):							
+				if (comp3_status=="blue"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "black"
+					comp3 = 1
+					return 'black'
+				elif(comp3_status=="black"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "red"					
+					comp3 = 2					
+					return 'red'
+				elif (comp3_status=="red"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "orange"
+					comp3 = 3
+					return 'orange'
+				elif(comp3_status=="orange"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "yellow"					
+					comp3 = 4					
+					return 'yellow'
+				elif(comp3_status == 'yellow'):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "green"					
+					comp3 = 5					
+					return 'green'
+				elif(comp3_status=="green"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "violet"					
+					comp3 = 6					
+					return 'violet'
+				elif (comp3_status=="violet"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "pink"
+					comp3 = 7
+					return 'pink'
+				elif(comp3_status == 'pink'):
+					comp3_status = "idle"
+					comp3 = -1	
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
 		elif(current_mode == "Competition 4"):
-			pass
+			if(comp4 == -1):
+				comp4 = 0
+				comp4_status = "blue"
+			print forwardKinematics(q[0],q[1],q[2],q[3])
+			print comp4	
+			if(current_action=="idle"):							
+				if (comp4_status=="blue"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "black"
+					comp4 = 1
+					return 'black'
+				elif(comp4_status=="black"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "red"					
+					comp4 = 2					
+					return 'red'
+				elif (comp4_status=="red"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "orange"
+					comp4 = 3
+					return 'orange'
+				elif(comp4_status=="orange"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "yellow"					
+					comp4 = 4					
+					return 'yellow'
+				elif(comp4_status == 'yellow'):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "green"					
+					comp4 = 5					
+					return 'green'
+				elif(comp4_status=="green"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "violet"					
+					comp4 = 6					
+					return 'violet'
+				elif (comp4_status=="violet"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "pink"
+					comp4 = 7
+					return 'pink'
+				elif(comp4_status == 'pink'):
+					comp4_status = "idle"
+					comp4 = -1	
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
 		elif(current_mode == "Competition 5"):
 			pass
 
@@ -245,13 +345,13 @@ class Statemachine():
 	if(current_mode=="Competition 1"):
 		new_q = [-q[0], q[1], q[2], q[3]]
 	if(current_mode=="Competition 2"):
-		new_q = [-q_comp2[0][comp2_status], q_comp2[1][comp2_status], q_comp2[2][comp2_status], q_comp2[3][comp2_status]]
+		new_q = [-q_comp[0][comp2], q_comp[1][comp2], q_comp[2][comp2], q_comp[3][comp2]]
 	if(current_mode=="Competition 3"):
-		new_q = [-q[0], q[1], q[2], q[3]]
+		new_q = [-q_comp[0][comp3], q_comp[1][comp3], q_comp[2][comp3], q_comp[3][comp3]]
 	if(current_mode=="Competition 4"):
-		new_q = [-q[0], q[1], q[2], q[3]]
+		new_q = [-q_comp[0][comp4], q_comp[1][comp4], q_comp[2][comp4], q_comp[3][comp4]]
 	if(current_mode=="Competition 5"):
-		new_q = [-q[0], q[1], q[2], q[3]]
+		new_q = [-q_comp[0][comp5], q_comp[1][comp5], q_comp[2][comp5], q_comp[3][comp5]]
 	
 	self.setq(new_q,new_q,new_q)		
 	
