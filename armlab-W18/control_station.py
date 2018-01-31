@@ -543,7 +543,7 @@ class Gui(QtGui.QMainWindow):
     def place(self):
 	
 	print [putx, puty, putz, putangle]
-	endCoord = [putx/10, puty/10, (putz+25)/10, gripper_orientation]	
+	endCoord = [putx/10, puty/10, (putz+45)/10, gripper_orientation]	
 	#print "endcoord:"
 	#print endCoord
 	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])		
@@ -584,8 +584,32 @@ class Gui(QtGui.QMainWindow):
 	angles[2] = round(self.trim_angle(angles[2]),2)
 	angles[3] = round(self.trim_angle(angles[3]),2)
 	self.statemachine.setq(angles,angles,angles)
+
+    def generatecomp2(self):
+	new_q = np.zeros([4,3])
+	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
+	endCoord = [-1*(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	new_q[0][0] = round(self.trim_angle(angles[0]),2)
+	new_q[1][0] = round(self.trim_angle(angles[1]),2)	
+	new_q[2][0] = round(self.trim_angle(angles[2]),2)
+	new_q[3][0] = round(self.trim_angle(angles[3]),2)
+		
+	endCoord = [-1*(blockx)/10, (blocky)/10, (blockz+80)/10, gripper_orientation]	
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	new_q[0][1] = round(self.trim_angle(angles[0]),2)
+	new_q[1][1] = round(self.trim_angle(angles[1]),2)	
+	new_q[2][1] = round(self.trim_angle(angles[2]),2)
+	new_q[3][1] = round(self.trim_angle(angles[3]),2)
 	
+	endCoord = [-1*(blockx)/10, (blocky)/10, (blockz+120)/10, gripper_orientation]	
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	new_q[0][0] = round(self.trim_angle(angles[0]),2)
+	new_q[1][2] = round(self.trim_angle(angles[1]),2)	
+	new_q[2][2] = round(self.trim_angle(angles[2]),2)
+	new_q[3][2] = round(self.trim_angle(angles[3]),2)
 	
+	self.statemachine.setq_comp2(new_q)
 
     def competition(self):
 	if(self.ui.btnUser11.text() == "Enter Competition Mode"):
@@ -618,8 +642,10 @@ class Gui(QtGui.QMainWindow):
 	if(self.ui.btnUser2.text()=="Depth and RGB Calibration"):
         	self.deprgb_cali()
 	elif(self.ui.btnUser2.text()=="Competition 2"):
-		pass
-	
+		self.generatecomp2()
+		self.getangles('blue')		
+		self.statemachine.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
+		
     def btn3(self): 
 	if(self.ui.btnUser3.text()=="Extrinsic Calibration"):
         	self.extrinsic_cali()
