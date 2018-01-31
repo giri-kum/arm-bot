@@ -155,7 +155,7 @@ class Statemachine():
 
     
     def statemachine_check(self, ui, rex): #running at 100 ms
-	global current_mode, current_action, current_movement, current_motorstate, past_states, comp1_status
+	global current_mode, current_action, current_movement, current_motorstate, past_states, comp1_status, comp2_status
 	past_status = past_states[0]+", "+past_states[1]+", "+ past_states[2] + ", "+ past_states[3]
 	if(current_motorstate == "motion"):
 		if(self.checkmotors(rex)):
@@ -186,7 +186,7 @@ class Statemachine():
 					return 'red'
 				elif(comp1_status=="red"):
 					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
-					comp1_status = "red"					
+					comp1_status = "green"					
 					return 'green'
 				elif(comp1_status == 'green'):
 					comp1_status = "idle"
@@ -195,20 +195,21 @@ class Statemachine():
 				self.picknplace(ui,rex)
 
 		elif(current_mode == "Competition 2"):
-			if(comp1_status == -1):
-				comp1_status = 0
-						
+			if(comp2_status == -1):
+				comp2_status = 0
+			print forwardKinematics(q[0],q[1],q[2],q[3])
+			print comp2_status	
 			if(current_action=="idle"):							
-				if (comp1_status==0):
+				if (comp2_status==0):
 					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")					
-					comp1_status = 1
+					comp2_status = 1
 					return 'red'
-				elif(comp1_status==1):
+				elif(comp2_status==1):
 					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
-					comp1_status = 2					
+					comp2_status = 2					
 					return 'green'
-				elif(comp1_status == 2):
-					comp1_status = -1
+				elif(comp2_status == 2):
+					comp2_status = -1
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
@@ -220,16 +221,6 @@ class Statemachine():
 			pass
 
 	return "none"
-
-    def getangles(self, color):
-	blockx, blocky, blockz, angle = get_color_block_world_coord(color)
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
-	angles[0] = round(self.trim_angle(angles[0]),2)
-	angles[1] = round(self.trim_angle(angles[1]),2)	
-	angles[2] = round(self.trim_angle(angles[2]),2)
-	angles[3] = round(self.trim_angle(angles[3]),2)
-	self.setq(angles,angles,angles)
 
 
     def picknplace(self,ui,rex):
