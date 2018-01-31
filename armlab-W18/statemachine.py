@@ -6,13 +6,14 @@ import functools
 import decimal
 import pylab
 
-
 D2R = 3.141592/180.0
 R2D = 180.0/3.141592
 current_motorstate = "idle" # possible states: motion or idle
 current_mode = "idle" # competition1 or competition2 or competition3 or competition4 or competition5 or testing
 current_action = "idle" #picking, placing
 current_movement = "idle" #picking, grabbing qi, grabbing q, grabbing qf, idle or placing, placing qi, placing q, placing qf  
+
+comp1_status = "idle"
 past_status = ""
 past_states = [""]*4
 qi = [0.0]*6
@@ -149,7 +150,7 @@ class Statemachine():
 
     
     def statemachine_check(self, ui, rex): #running at 100 ms
-	global current_mode, current_action, current_movement, current_motorstate, past_states
+	global current_mode, current_action, current_movement, current_motorstate, past_states, comp1_status
 	past_status = past_states[0]+", "+past_states[1]+", "+ past_states[2] + ", "+ past_states[3]
 	if(current_motorstate == "motion"):
 		if(self.checkmotors(rex)):
@@ -170,22 +171,24 @@ class Statemachine():
 				self.action_idle()		
 				self.mode_idle()
 		elif(current_mode == "Competition 1"):
-			if(current_action == "picking"):
-				if(current_movement == "idle"):
-					current_action = "placing"
-					current_movement = "placing"
-					new_q = [-q[0], q[1], q[2], q[3]]
-					self.setq(new_q,new_q,new_q)		
-					self.placing(ui,rex)
-				else:
-					self.picking(ui,rex)
-
-			elif(current_action == "placing"):
-				if(current_movement == "idle"):
-					self.action_idle()
+			if(comp1_status == "idle"):
+				comp1_status = 'blue'
+						
+			if(current_action=="idle"):							
+				if (comp1_status=="blue"):
+					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")					
+					comp1_status = "red"
+					return 'red'
+				elif(comp1_status=="red"):
+					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
+					comp1_status = "red"					
+					return 'green'
+				elif(comp1_status == 'green'):
+					comp1_status = "idle"
 					self.mode_idle()
-				else:
-					self.placing(ui,rex)
+			else:
+				self.picknplace(ui,rex)
+
 		elif(current_mode == "Competition 2"):
 			pass
 		elif(current_mode == "Competition 3"):
@@ -194,6 +197,39 @@ class Statemachine():
 			pass
 		elif(current_mode == "Competition 5"):
 			pass
+
+	return "none"
+
+    def getangles(self, color):
+	blockx, blocky, blockz, angle = get_color_block_world_coord(color)
+	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles[0] = round(self.trim_angle(angles[0]),2)
+	angles[1] = round(self.trim_angle(angles[1]),2)	
+	angles[2] = round(self.trim_angle(angles[2]),2)
+	angles[3] = round(self.trim_angle(angles[3]),2)
+	self.setq(angles,angles,angles)
+
+
+    def picknplace(self,ui,rex):
+	global current_movement, current_action
+
+	if(current_action == "picking"):
+		if(current_movement == "idle"):
+			current_action = "placing"
+			current_movement = "placing"
+			new_q = [-q[0], q[1], q[2], q[3]]
+			self.setq(new_q,new_q,new_q)		
+			self.placing(ui,rex)
+		else:
+			self.picking(ui,rex)
+
+	elif(current_action == "placing"):
+		if(current_movement == "idle"):
+			self.action_idle()
+		else:
+			self.placing(ui,rex)
+	
 
 
     def picking(self,ui,rex):
@@ -236,15 +272,6 @@ class Statemachine():
 		self.hold(ui,rex) 	
 
 
-    def getangles(self, color):
-	blockx, blocky, blockz, angle = self.get_color_block_world_coord(color)
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
-	angles[0] = round(self.trim_angle(angles[0]),2)
-	angles[1] = round(self.trim_angle(angles[1]),2)	
-	angles[2] = round(self.trim_angle(angles[2]),2)
-	angles[3] = round(self.trim_angle(angles[3]),2)
-	self.setq(angles,angles,angles)
 	
     def hold(self,ui,rex):
 	global current_motorstate, current_movement
