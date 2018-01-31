@@ -48,7 +48,8 @@ class Gui(QtGui.QMainWindow):
 
         """ Set GUI to track mouse """
         QtGui.QWidget.setMouseTracking(self,True)
-
+	self.statemachine.setme(self.ui,self.rex)
+        
         """ 
         GUI timer 
         Creates a timer and calls update_gui() function 
@@ -69,10 +70,9 @@ class Gui(QtGui.QMainWindow):
 	"""
 	Giri - Statemachine timer
 	"""
-	self.statemachine.setme(self.ui,self.rex)
-        self._timer3 = QtCore.QTimer(self)
-        self._timer3.timeout.connect(self.statemachine.timerCallback)
-        self._timer3.start(100)  # frequency of the timer is set by this. it is 100 ms now. However, the time.now can give microseconds precision not just millisecond
+	#self._timer3 = QtCore.QTimer(self)
+        #self._timer3.timeout.connect(self.statemachine.timerCallback)
+        #self._timer3.start(100)  # frequency of the timer is set by this. it is 100 ms now. However, the time.now can give microseconds precision not just millisecond
 	
 	
         """ 
@@ -165,7 +165,9 @@ class Gui(QtGui.QMainWindow):
             HINT: you can use the radio buttons to select different
             video sources like is done below
         """
-        
+        color = self.statemachine.timerCallback()
+	if(color != "none"):
+	    self.getangles(color)	
         if(self.video.kinectConnected == 1):
             try:
                 self.video.captureVideoFrame()
@@ -518,7 +520,7 @@ class Gui(QtGui.QMainWindow):
 
     def pick(self): #Josh
 	global putx, puty, putz, putangle
-	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
+	blockx, blocky, blockz, angle = self.get_color_block_world_coord('red')
 	print [blockx, blocky, blockz, angle]
 	#self.statemachine.setorientation(angle*R2D)
 
@@ -554,6 +556,36 @@ class Gui(QtGui.QMainWindow):
 #	self.statemachine.hold(self.ui,self.rex, angles,"placing")
 
 
+    def get_color_block_world_coord(self,color): #Josh
+	self.video.blockDetector()
+	[blockx_rgb, blocky_rgb], angle = self.video.color_detection(color)
+	xy_in_rgb = np.float32([[[blocky_rgb,blockx_rgb]]]) #Josh
+	xy_in_rgb_homogenous = np.array([blocky_rgb,blockx_rgb,1.0])
+	xy_in_dep = np.dot(self.video.rgb2dep_aff_matrix, xy_in_rgb_homogenous) #Josh
+	x_dep = int(xy_in_dep[0]) #Josh
+	y_dep = int(xy_in_dep[1]) #Josh
+        d = self.video.currentDepthFrame[y_dep][x_dep]
+	Z = -1
+	for idx in range(len(self.video.levels_mm)):
+	    if d <=self.video.levels_upper_d[idx] and d>=self.video.levels_lower_d[idx]:
+		Z = 941 - self.video.levels_mm[idx]
+		break
+	camera_coord = Z*cv2.undistortPoints(xy_in_rgb,self.video.intrinsic,self.video.distortion_array)
+	camera_coord_homogenous = np.transpose(np.append(camera_coord,[Z,1.0]))
+	world_coord_homogenous = np.dot(self.video.extrinsic, camera_coord_homogenous)
+	return world_coord_homogenous[0], world_coord_homogenous[1], world_coord_homogenous[2], angle
+
+    def getangles(self, color):
+	blockx, blocky, blockz, angle = self.get_color_block_world_coord(color)
+	endCoord = [(blockx)/10, (blocky)/10, (blockz+40)/10, gripper_orientation]	
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles[0] = round(self.trim_angle(angles[0]),2)
+	angles[1] = round(self.trim_angle(angles[1]),2)	
+	angles[2] = round(self.trim_angle(angles[2]),2)
+	angles[3] = round(self.trim_angle(angles[3]),2)
+	self.statemachine.setq(angles,angles,angles)
+	
+	
 
     def competition(self):
 	if(self.ui.btnUser11.text() == "Enter Competition Mode"):
@@ -579,7 +611,7 @@ class Gui(QtGui.QMainWindow):
 	if(self.ui.btnUser1.text()=="Configure Servos"):
         	self.rex.cfg_publish_default()
 	elif(self.ui.btnUser1.text()=="Competition 1"):
-		self.statemachine.getangles('blue')		
+		self.getangles('blue')		
 		self.statemachine.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
 		
     def btn2(self): 
