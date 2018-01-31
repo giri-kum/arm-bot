@@ -13,7 +13,8 @@ current_mode = "idle" # competition1 or competition2 or competition3 or competit
 current_action = "idle" #picking, placing
 current_movement = "idle" #picking, grabbing qi, grabbing q, grabbing qf, idle or placing, placing qi, placing q, placing qf  
 
-comp1_status = "idle"
+comp1_status = "idle" # idle, red, blue, green
+comp2_status = -1 # 0,1,2,
 past_status = ""
 past_states = [""]*4
 qi = [0.0]*6
@@ -23,7 +24,7 @@ q  = [0.0]*6
 #mode ="normal"
 wrist_orientation = 0.0
 gripper_orientation = 90.0
-
+q_comp2 = np.zeros([4,3])
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
 	if(usec):
@@ -65,6 +66,10 @@ class Statemachine():
 	q  = new_q
 	qf = new_qf
 		
+    def setq_comp2(self,new_q_comp2):
+	global q_comp2
+	q_comp2 = new_q_comp2
+
     def setme(self, ui, rex):
 	self.timerCallback = functools.partial(self.statemachine_check, ui = ui ,rex = rex)
 
@@ -190,7 +195,23 @@ class Statemachine():
 				self.picknplace(ui,rex)
 
 		elif(current_mode == "Competition 2"):
-			pass
+			if(comp1_status == -1):
+				comp1_status = 0
+						
+			if(current_action=="idle"):							
+				if (comp1_status==0):
+					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")					
+					comp1_status = 1
+					return 'red'
+				elif(comp1_status==1):
+					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
+					comp1_status = 2					
+					return 'green'
+				elif(comp1_status == 2):
+					comp1_status = -1
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
 		elif(current_mode == "Competition 3"):
 			pass
 		elif(current_mode == "Competition 4"):
@@ -218,8 +239,7 @@ class Statemachine():
 		if(current_movement == "idle"):
 			current_action = "placing"
 			current_movement = "placing"
-			new_q = [-q[0], q[1], q[2], q[3]]
-			self.setq(new_q,new_q,new_q)		
+			self.set_placing_location()
 			self.placing(ui,rex)
 		else:
 			self.picking(ui,rex)
@@ -229,6 +249,20 @@ class Statemachine():
 			self.action_idle()
 		else:
 			self.placing(ui,rex)
+	
+    def set_placing_location(self):
+	if(current_mode=="Competition 1"):
+		new_q = [-q[0], q[1], q[2], q[3]]
+	if(current_mode=="Competition 2"):
+		new_q = [-q_comp2[0][comp2_status], q_comp2[1][comp2_status], q_comp2[2][comp2_status], q_comp2[3][comp2_status]]
+	if(current_mode=="Competition 3"):
+		new_q = [-q[0], q[1], q[2], q[3]]
+	if(current_mode=="Competition 4"):
+		new_q = [-q[0], q[1], q[2], q[3]]
+	if(current_mode=="Competition 5"):
+		new_q = [-q[0], q[1], q[2], q[3]]
+	
+	self.setq(new_q,new_q,new_q)		
 	
 
 
