@@ -60,7 +60,7 @@ class Video():
 	self.extrinsic_cal_world_coord = np.float32([[-305., -305., 0.],[-305., 305.,0.],[305.0, 305.0,0.]]) #Josh
  	self.levels_mm = np.float32([0., 19.25, 57.5, 96.25, 134.75, 173.25, 211.75, 250.25])
 	self.levels_lower_d = np.float32([716,705,687,668,648,624,598,570,538])#np.float32([716,697,680,659,637,615,586,557,530])
-	self.levels_upper_d = np.float32([726,708,692,675,653,630,604,575,543])#np.float32([726,715,696,679,658,636,614,585,556])
+	self.levels_upper_d = np.float32([726,710,692,675,653,630,604,575,543])#np.float32([726,715,696,679,658,636,614,585,556])
 	self.depth_image_min_row = 0
 	self.depth_image_max_row = 0
 	self.depth_image_min_col = 0
@@ -72,8 +72,8 @@ class Video():
 	self.blobs_angle_rgb = []
 	self.blobs_info_rgb = []
 	#due to light from roof, yellow shows 0,0,254 in hsv color space. red goes to two ends of hsv spectral, needs to consider seperately
-	self.hsv_lower_hsv = [[0.,9.,15.],[6.,155.,140.],[0.,0.,200.],[40.,45.,75.],[110.,50.,80.],[130.,70.,60.],[164.,150.,170.]] #Josh
-	self.hsv_upper_hsv = [[180.,243.,75.],[20.,255.,255.],[39.,30.,255.],[85.,200.,165.],[129.,255.,255.],[168.,190.,160.],[177.,244.,255.]] #Josh
+	self.hsv_lower_hsv = [[0.,9.,15.],[6.,155.,140.],[0.,0.,200.],[40.,30.,75.],[110.,50.,80.],[130.,70.,60.],[164.,150.,170.]] #Josh
+	self.hsv_upper_hsv = [[180.,243.,75.],[20.,255.,255.],[39.,30.,255.],[85.,200.,210.],[129.,255.,255.],[168.,190.,160.],[177.,244.,255.]] #Josh
 	self.hsv_colors = ['black','orange','yellow','green','blue','violet','pink']
 
 
@@ -216,10 +216,11 @@ class Video():
 		self.blobs_box_pts.append(box_points)
 		cv2.drawContours(im2,[box_points],0,(255,255,255),2)
 	cv2.imwrite('contours.jpg',im2)
-	#self.color_detection("red")
+	#self.color_detection("green")
 	#print "color finished!"
 
     def color_detection(self, color_str = 'blue'): #Josh
+
 	self.blobs_box_pts_rgb_frame = []
 	self.captureVideoFrame()
 	RGB_image = self.currentVideoFrame
@@ -237,10 +238,10 @@ class Video():
 	    #cv2.drawContours(test_hsv,[box_pts_rgb],0,(255,255,255),2)
 	#cv2.imwrite('color_test.jpg',test_hsv)
 	if color_str == 'red':
-	    upper_bound1 = np.array([180.,255.,195.])
-	    lower_bound1 = np.array([170.,120.,80.])
-	    upper_bound2 = np.array([5.,255.,190.])
-	    lower_bound2 = np.array([0.,120.,80.])
+	    upper_bound1 = np.array([180.,255.,255.])
+	    lower_bound1 = np.array([170.,0.,80.])
+	    upper_bound2 = np.array([5.,255.,255.])
+	    lower_bound2 = np.array([0.,0.,80.])
 	    count = 0
 	    for box_points in self.blobs_box_pts_rgb_frame:
 		count += 1
@@ -315,6 +316,7 @@ class Video():
 			print color_str + 'found!'
 			cv2.imwrite('color_test.jpg',RGB_image)
 			return [centerx, centery], angle_yoverx
+	return [0.,0.], 0.
 
 	
 
