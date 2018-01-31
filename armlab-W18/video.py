@@ -72,9 +72,9 @@ class Video():
 	self.blobs_angle_rgb = []
 	self.blobs_info_rgb = []
 	#due to light from roof, yellow shows 0,0,254 in hsv color space. red goes to two ends of hsv spectral, needs to consider seperately
-	self.hsv_lower_hsv = [[0.,9.,15.],[6.,155.,140.],[0.,0.,200.],[40.,30.,75.],[110.,50.,80.],[130.,70.,60.],[164.,100.,170.]] #Josh
-	self.hsv_upper_hsv = [[180.,243.,75.],[20.,255.,255.],[39.,255.,255.],[85.,200.,210.],[129.,255.,255.],[168.,190.,160.],[177.,177.,255.]] #Josh
-	self.hsv_colors = ['black','orange','yellow','green','blue','violet','pink']
+	self.hsv_lower_hsv = [[0.,9.,15.],[4.,180.,200.],[20.,90.,200.],[40.,30.,75.],[110.,50.,80.],[130.,70.,60.],[164.,150.,170.],[0.,0.,0.]] #Josh
+	self.hsv_upper_hsv = [[180.,243.,75.],[20.,255.,255.],[39.,255.,255.],[85.,200.,210.],[129.,255.,255.],[168.,190.,160.],[173.,210.,255.],[180.,255.,255.]] #Josh
+	self.hsv_colors = ['black','orange','yellow','green','blue','violet','pink','all']
 
 
     def captureVideoFrame(self):
@@ -201,7 +201,7 @@ class Video():
 	#print min_col, max_col
 	board_depth = depth_image[min_row:max_row,min_col:max_col]
 	#print np.shape(board_depth)
-	board_depth_binary = cv2.inRange(depth_image,0,715) # get binary image of depth frame by the reading of depth camera. 720 is the boundary of bricks surface and surfaces under them.
+	board_depth_binary = cv2.inRange(depth_image,500,715) # get binary image of depth frame by the reading of depth camera. 720 is the boundary of bricks surface and surfaces under them.
 	im2, contours,hierarchy = cv2.findContours(board_depth_binary,1,2)
 	for contour in contours:
 	    contour_area = cv2.contourArea(contour)
@@ -216,15 +216,16 @@ class Video():
 		self.blobs_box_pts.append(box_points)
 		cv2.drawContours(im2,[box_points],0,(255,255,255),2)
 	cv2.imwrite('contours.jpg',im2)
-	#self.color_detection("black")
-	#self.color_detection("red")
-	#self.color_detection("green")
-	#self.color_detection("blue")
-	#self.color_detection("pink")
-	#self.color_detection("orange")
-	#self.color_detection("violet")
-	#self.color_detection("yellow")
-	#print "color finished!"
+	self.color_detection("black")
+	self.color_detection("red")
+	self.color_detection("green")
+	self.color_detection("blue")
+	self.color_detection("pink")
+	self.color_detection("orange")
+	self.color_detection("violet")
+	self.color_detection("yellow")
+	#self.color_detection("all")
+	print "color finished!"
 
     def color_detection(self, color_str = 'blue'): #Josh
 
@@ -246,9 +247,9 @@ class Video():
 	#cv2.imwrite('color_test.jpg',test_hsv)
 	if color_str == 'red':
 	    upper_bound1 = np.array([180.,255.,255.])
-	    lower_bound1 = np.array([170.,180.,80.])
+	    lower_bound1 = np.array([170.,163.,80.])
 	    upper_bound2 = np.array([5.,255.,255.])
-	    lower_bound2 = np.array([0.,0.,80.])
+	    lower_bound2 = np.array([0.,163.,80.])
 	    count = 0
 	    for box_points in self.blobs_box_pts_rgb_frame:
 		count += 1
@@ -284,7 +285,8 @@ class Video():
 		    return [centerx, centery], angle_yoverx
 	    
 	    
-	else:    
+	#if (color_str == 'black' or color_str == 'blue' or color_str == 'orange' or color_str == 'green' or color_str == 'violet' or color_str == 'yellow' or color_str == 'pink' or color_str == 'all'): 
+	else:   
 	    for color_idx in range(len(self.hsv_colors)):
 	        if self.hsv_colors[color_idx] != color_str:
 		    continue
@@ -319,6 +321,8 @@ class Video():
 		    if close_sum >= 255*49*0.7:
 		        #cv2.imwrite('opening {}.jpg'.format(count),close)
 		        #cv2.imwrite('mask {}.jpg'.format(count),mask)
+			if(centerx<=40 and centery<=40):
+			    continue
 			cv2.drawContours(RGB_image,[box_points],0,(255,255,255),2)
 			print color_str + 'found!'
 			cv2.imwrite('color_test {} .jpg'.format(color_str),RGB_image)
