@@ -63,6 +63,13 @@ def inverseKinematics(x,y,z,phi):
 		theta3=(pi-arccos(theta3arg))*180/pi
 	
 	theta4=phi-theta2-theta3 #wrist angle.
+	if theta2>128:
+	    print("theta2 is greater than 128 degrees. Limit on elbow is 128 degrees.")
+	    print(theta2)
+	if theta3>121:
+	    print("theta3 is greater than 121 degrees. Limit on elbow is 121 degrees.")
+	    print(theta2)
+	    return array([0,0,0,0])
 	print 	[theta1,theta2,theta3,theta4]
 	return array([theta1,theta2,theta3,theta4])
 '''
