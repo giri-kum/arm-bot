@@ -1,29 +1,41 @@
-import datetime #Giri
+import datetime #Giri copy
 import time
+from kinematics import *
 import numpy as np
 import functools
 import decimal
 import pylab
 
-waypoints = [0.0,0.0,0.0,0.0]*2
-viapoints = [0.0,0.0,0.0,0.0]
-viaspeed =  [0.0,0.0,0.0,0.0]
-datasheet_speed = [55.0,55.0,55.0,59.0,114.0,114.0] #in rpm [0.33,0.33,0.33,0.531,0.684,0.684] degrees per millisecond. #[0.263s] for 180 
-max_speed = [datasheet_speed[i]/2 for i in range(0,6)]
-""" Radians to/from  Degrees conversions """
 D2R = 3.141592/180.0
 R2D = 180.0/3.141592
-ToRPM = 60.0/360 #Degree/s to rpm
-max_i = 0
-folder = "lessons/"	
-filename = "Now"
-current_mode = "idle" # teach, repeat, spline repeat
-current_action = "idle" # learning, repeating, computing, spline repeating
-current_motorstate = "idle" #motion
-current_i = 0
+current_motorstate = "idle" # possible states: motion or idle
+current_mode = "idle" # competition1 or competition2 or competition3 or competition4 or competition5 or testing
+current_action = "idle" #picking, placing
+current_movement = "idle" #picking, grabbing qi, grabbing q, grabbing qf, idle or placing, placing qi, placing q, placing qf  
+
+comp1_status = "idle" # idle, red, blue, green
+comp2_status = "idle" # idle, red, blue, green
+comp3_status = "idle" # idle, red, blue, green
+comp4_status = "idle" # idle, red, blue, green
+comp5_status = "idle" # idle, red, blue, green
+comp1 = -1 # 0,1,2,
+comp2 = -1 # 0,1,2,
+comp3 = -1 # 0,1,2,
+comp4 = -1 # 0,1,2,
+comp5 = -1 # 0,1,2,
+close_angle = -90
+open_angle = 90
 past_status = ""
 past_states = [""]*4
-global_tf = 10 #in seconds
+qi = [0.0]*6
+qf = [0.0]*6
+q  = [0.0]*6
+#picking = "True"
+#mode ="normal"
+wrist_orientation = 0.0
+gripper_orientation = 180.0
+gripping_height = 0.5
+q_comp = np.zeros([4,3])
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
 	if(usec):
@@ -31,6 +43,7 @@ def gen_timestamp(usec=False): #Giri
 	else:
 		timestamp = str(t.day) + '_' + str(t.hour) + '_' + str(t.minute) + '_' + str(t.second)
 	return timestamp
+
 
 def isclose(x,y,tol):
 	if(abs(x-y)<=tol):
@@ -48,417 +61,453 @@ def trim_angle(q):
 	else :
 		new_q = q
 	return new_q
+
+
 class Statemachine():
     timerCallback = functools.partial(gen_timestamp)
+    def setorientation(self, w_orient, g_orient=gripper_orientation,gripper=False):
+	global wrist_orientation, gripper_orientation
+	wrist_orientation = w_orient
+	if(gripper):
+		gripper_orientation = g_orient
 
-    def checkmotors(self,rex,setangles=["hi",0,0,0],atol = [5.000,5.000,5.000,5.000]):
-	if(setangles[0] == "hi"):
-		setangles = [rex.joint_angles[0]*R2D,rex.joint_angles[1]*R2D,rex.joint_angles[2]*R2D,rex.joint_angles[3]*R2D]
-	
-	 #do a formal way of selecting this tolerance
-	if (isclose(setangles[0],rex.joint_angles_fb[0]*R2D,atol[0])):
-		if(isclose(setangles[1],rex.joint_angles_fb[1]*R2D,atol[1])):
-			if(isclose(setangles[2],rex.joint_angles_fb[2]*R2D,atol[2])):
-				if(isclose(setangles[3],rex.joint_angles_fb[3]*R2D,atol[3])):
-					return True
-				else:
-					print "motor 3 fails" + str(abs(setangles[3]-rex.joint_angles_fb[3]*R2D))
-					return False
-			else:
-				print "motor 2 fails" + str(abs(setangles[2]-rex.joint_angles_fb[2]*R2D))
-				return False
-		else:
-			print "motor 1 fails" + str(abs(setangles[1]-rex.joint_angles_fb[1]*R2D))
-			return False
-	else:
-		print "motor 0 fails " + str(abs(setangles[0]-rex.joint_angles_fb[0]*R2D))
-		return False 	
-
-    
-    def statemachine_check(self, ui, rex): #running at 100 ms
-	global current_mode, current_action, current_i, current_motorstate, past_states, max_i
-	past_status = past_states[0]+", "+past_states[1]+", "+ str(past_states[2])+", "+ past_states[3]
-
-	if(current_motorstate == "motion"):
-		if(current_action == "going to wp2"):
-			vp = [viapoints[0,current_i+1],viapoints[1,current_i+1],viapoints[2,current_i+1],viapoints[3,current_i+1]]
-			tol = [20, 20, 20, 20]
-			if(self.checkmotors(rex,vp,tol)):
-				self.motor_idle(rex)
-		else:
-			if(self.checkmotors(rex)):
-				self.motor_idle(rex)
-	current_status = self.getmestatus(True)
-	ui.rdoutStatus.setText(current_status)		
-
-	if(current_mode == "repeat" and current_action == "repeating" and current_motorstate == "idle"):
-		current_i = current_i+1
-		if(current_i >= max_i):
-			self.mode_idle()
-			self.action_idle()
-			ui.btnUser5.setText("Repeat")
-			ui.btnUser5.setEnabled(True)
-			ui.btnUser8.setEnabled(True)
-		else:		
-			self.set_into_motion(ui,rex)
-	if(current_status != past_status and current_motorstate == "idle"): 
-		print "current_status: " + current_status + "; past_status: " + past_status
-		print "current_motorstate: " + current_motorstate		
-		past_states = self.getmestatus(False)
+    def setq(self,new_qi,new_q,new_qf):
+	global qi, q, qf
+	qi = new_qi
+	q  = new_q
+	qf = new_qf
 		
-		if(current_mode == "spline repeat"):
-			if(current_action == "compute"):
-				self.srepeat(ui,rex)
-			elif(current_action == "go to wp1"):
-				self.sreset(ui,rex)
-			elif(current_action == "ready"):
-				self.launch(ui,rex)
-			elif(current_action == "going to wp2"):
-				current_i = current_i+1
-				print "max_i=" + str(max_i) 
-				if(current_i >=max_i-1):
-					self.mode_idle()
-					self.action_idle()
-					ui.btnUser8.setText("Smooth Repeat")
-					ui.btnUser5.setEnabled(True)
-					ui.btnUser8.setEnabled(True)
-				else:		
-					self.launch(ui,rex)
-			
-		else:
-			pass #print current_state
+    def get_orientations(self,n=1):
+	#print [gripper_orientation, wrist_orientation, gripping_height]
+	if(n==1):
+		return gripper_orientation
+	elif(n==2):
+		return wrist_orientation
+	elif(n==3):
+		return gripping_height
 
-    def launch(self,ui,rex):
-	global current_motorstate, current_action 	
-	rex.torque_multiplier = ui.sldrMaxTorque.value()/100.0
-	current_action = "going to wp2"
-	rex.joint_angles[0]= viapoints[0,max_i-1]*D2R
-	rex.joint_angles[1]= viapoints[1,max_i-1]*D2R
-	rex.joint_angles[2]= viapoints[2,max_i-1]*D2R
-	rex.joint_angles[3]= viapoints[3,max_i-1]*D2R        	
-	rex.speed_multiplier[0] = viaspeed[0,current_i+1]
-        rex.speed_multiplier[1] = viaspeed[1,current_i+1]
-        rex.speed_multiplier[2] = viaspeed[2,current_i+1]
-        rex.speed_multiplier[3] = viaspeed[3,current_i+1]
-	rex.cmd_publish()
-	print "point: " + str(i)
-	print rex.speed_multiplier
-	current_motorstate = "motion"
-	
-    def sreset(self,ui,rex):
-	global current_motorstate, current_action	
-	rex.torque_multiplier = ui.sldrMaxTorque.value()/100.0
-	rex.joint_angles[0]= float(viapoints[0,0])*D2R
-	rex.joint_angles[1]= float(viapoints[1,0])*D2R
-	rex.joint_angles[2]= float(viapoints[2,0])*D2R
-	rex.joint_angles[3]= float(viapoints[3,0])*D2R        	
-	rex.speed_multiplier[0] = ui.sldrSpeed.value()/100.0
-        rex.speed_multiplier[1] = ui.sldrSpeed.value()/100.0
-        rex.speed_multiplier[2] = ui.sldrSpeed.value()/100.0
-        rex.speed_multiplier[3] = ui.sldrSpeed.value()/100.0        		
-	rex.cmd_publish()
-	current_motorstate = "motion"
-	current_action = "ready"
+    def set_orientations(self,value,n=1):
+	global gripper_orientation, wrist_orientation, gripper_height
+	if(n==1):
+		print "gripper_orientation set: " + str(value)
+		gripper_orientation = value
+	elif(n==2):
+		print "wrist_orientation set: " + str(value)
+		wrist_orientation = value
+	elif(n==3):
+		print "gripping_height set: " + str(value)
+		gripping_height = value
 
-
-    def srepeat(self, ui, rex):
-	global current_i, max_i, wp_lines, current_action, current_mode, waypoints, viapoints, viaspeed 
-	current_mode = "spline repeat"	
-	current_action = "computing"	
-	ui.btnUser5.setEnabled(False) 				
-	ui.btnUser8.setEnabled(False) 						
-	ui.btnUser8.setText("Repeating Spline")
-	f = open(folder+"wp_"+filename+".csv", "r")
-	wp_lines = f.readlines()
-	f.close()		
-	max_i = len(wp_lines)		
-	tf = int(global_tf*1000)
-	
-	if(max_i!=2):
-		print "Enter only two way points"
-	else:
-		q = np.zeros([4,max_i])
-		wp = wp_lines[0].split(',')
-		q[0,0]= float(wp[0])
-		q[1,0]= float(wp[1])
-		q[2,0]= float(wp[2])
-		q[3,0]= float(wp[3])        					
-		wp = wp_lines[1].split(',')
-		q[0,1]= float(wp[0])
-		q[1,1]= float(wp[1])
-		q[2,1]= float(wp[2])
-		q[3,1]= float(wp[3])
-		t,sq0,sv0,aq0 = self.computespline(q[0,1],q[0,0],0,tf)
-		t,sq1,sv1,aq1 = self.computespline(q[1,1],q[1,0],1,tf)
-		t,sq2,sv2,aq2 = self.computespline(q[2,1],q[2,0],2,tf)
-		t,sq3,sv3,aq3 = self.computespline(q[3,1],q[3,0],3,tf)
-		sq = np.concatenate(([sq0],[sq1],[sq2],[sq3]))	
-		sv = np.concatenate(([sv0],[sv1],[sv2],[sv3]))	
-		aq = np.concatenate(([aq0],[aq1],[aq2],[aq3]))	
-		self.savedata(t,sq,sv)
-		self.trajectory()
-		waypoints = q
-		viapoints = sq
-		viaspeed = sv
-		current_i = 0
-		max_i = len(sq0)
-		current_action = "go to wp1"
+    def setq_comp(self,new_q_comp):
+	global q_comp
+	q_comp = new_q_comp
 
     def setme(self, ui, rex):
 	self.timerCallback = functools.partial(self.statemachine_check, ui = ui ,rex = rex)
+
+    def getmestatus(self,combined=False):
+	if(combined):
+		return current_mode + ", " + current_action + ", " + current_movement + ", " + current_motorstate
+	else:	
+		return [current_mode, current_action, current_movement, current_motorstate]
    
+    def setmystatus(self,new_mode="Don't set", new_action="Don't set", new_movement="Don't set", new_motorstate="Don't set"):
+	global current_mode, current_action, current_motorstate, current_movement
+	if(new_mode != "Don't set"):
+		current_mode = new_mode
+	if(new_action != "Don't set"):
+		current_action = new_action
+	if(new_movement != "Don't set"):
+		current_movement = new_movement		
+	if(new_motorstate != "Don't set"):
+		current_motorstate = new_motorstate
+
     def motor_idle(self,rex):
 	global current_motorstate	
 	rex.speed_multiplier = [0.1]*rex.num_joints
 	current_motorstate = "idle"
 	rex.cmd_publish()
+    
+    def movement_idle(self):
+	global current_movement	
+	current_movement = "idle"
 
     def action_idle(self):
 	global current_action	
 	current_action = "idle"
 		
+
     def mode_idle(self):
 	global current_mode	
 	current_mode = "idle"
-
-    def i_idle(self):
-	global current_i	
-	current_i = 0
-
+	
     def estop(self, rex):
-	global current_motorstate	
-	current_motorstate = "estop"
         #sets the torque of all motors to 0, in case of emergency
-        rex.max_torque = [0.0, 0.0, 0.0, 0.0]
+        rex.max_torque = [0.0]*rex.num_joints
         rex.cmd_publish()
-
-    def getmestatus(self,combined=False):
-	if(combined):
-		return current_mode + ", " + current_action + ", " + str(current_i) + ", " + current_motorstate
-	else:	
-		return [current_mode, current_action, current_i, current_motorstate]
-   
-    def setmystatus(self,new_mode="Don't set", new_action="Don't set", new_motorstate="Don't set", new_i = "Don't set"):
-	global current_mode, current_action, current_motorstate, current_i
-	if(new_mode != "Don't set"):
-		current_mode = new_mode
-	if(new_action != "Don't set"):
-		current_action = new_action
-	if(new_motorstate != "Don't set"):
-		current_motorstate = new_motorstate
-	if(new_i != "Don't set"):
-		current_i = new_motorstate
-
-    def teach(self,ui,rex):
-	global filename, current_mode, current_action
-	if(ui.btnUser4.text() == "Teach"):	
-		current_mode = "teach"
-		current_action = "learning"
-		ui.btnUser5.setEnabled(True)
-		ui.btnUser8.setEnabled(False) 						
-		ui.btnUser4.setText("Stop Learning")
-		ui.btnUser5.setText("Learn This")
-		filename = gen_timestamp()
-		rex.torque_multiplier = 0;
-		rex.cmd_publish()
-
-	elif(ui.btnUser4.text() == "Stop Learning"):
-		self.mode_idle()
-		self.action_idle()
-		ui.btnUser4.setText("Teach")
-		ui.btnUser5.setText("Repeat")
-		ui.btnUser8.setEnabled(True)
-	
-    def repeat(self,ui,rex): #Giri
-	global current_i, max_i, wp_lines, current_action, current_mode
-	current_i = 0
-	
-	if(ui.btnUser4.text() == "Learn"):	
-		ui.btnUser4.setText("Teach")
-	if(ui.btnUser5.text() == "Learn This"):	
-		f = open(folder+"wp_"+filename+".csv", "a")
-		waypoints[0] = rex.joint_angles_fb[0]*R2D
-		waypoints[1] = rex.joint_angles_fb[1]*R2D
-		waypoints[2] = rex.joint_angles_fb[2]*R2D
-		waypoints[3] = rex.joint_angles_fb[3]*R2D
-		f.writelines(str(waypoints[0])+ ',' + str(waypoints[1])+ ',' + str(waypoints[2])+ ',' + str(waypoints[3]) + '\n')
-		f.close()
-	
-	elif(ui.btnUser5.text() == "Repeat"):
-		current_mode = "repeat"	
-		current_action = "computing"	
-		ui.btnUser5.setEnabled(False) 				
-		ui.btnUser8.setEnabled(False) 						
-		f = open(folder+"wp_"+filename+".csv", "r")
-		wp_lines = f.readlines()
-		f.close()		
-		max_i = len(wp_lines)
-		print "max_i:" + str(max_i)
-		ui.btnUser5.setText("Repeating")
-		current_action = "repeating"
-		self.set_into_motion(ui,rex)			
-
-
-    def savedata(self,t,sq,sv):
-	f = open(folder+"wp_"+filename+"_c.csv", "a")
-	g = open(folder+"sp_"+filename+"_c.csv", "a")
-	for i in range(0,len(t)):
-		f.writelines(str(sq[0,i])+ ',' + str(sq[1,i])+ ',' + str(sq[2,i])+ ',' + str(sq[3,i]) + ',' + str(t[i]) + '\n')
-		g.writelines(str(sv[0,i])+ ',' + str(sv[1,i])+ ',' + str(sv[2,i])+ ',' + str(sv[3,i]) + ',' + str(t[i]) + '\n')		
-	g.close()		
-	f.close()
-	
-    def getdata(self):
-	f = open(folder+"wp_"+filename+"_c.csv", "r")
-	g = open(folder+"sp_"+filename+"_c.csv", "r")
-	wp_lines = f.readlines()
-	sp_lines = g.readlines()			
-	g.close()
-	f.close()
-	max_i = len(wp_lines)
-	q = np.zeros([4,max_i])
-	v = np.zeros([4,max_i])
-	t = np.zeros([max_i])
-	for i in range(0,max_i):
-		waypoints = wp_lines[i].split(',')
-		speedpoints = sp_lines[i].split(',')
-		q[0,i]= float(waypoints[0])
-		q[1,i]= float(waypoints[1])
-		q[2,i]= float(waypoints[2])
-		q[3,i]= float(waypoints[3])        					
-		v[0,i]= float(speedpoints[0])
-		v[1,i]= float(speedpoints[1])
-		v[2,i]= float(speedpoints[2])
-		v[3,i]= float(speedpoints[3])        					
-		t[i]  = float(speedpoints[4])
-	return [t,q,v]
-
-				
-    def set_into_motion(self,ui,rex):
-	global current_motorstate	
-	print "Entered: " + str(current_i)
-	wp_points=wp_lines[current_i].split(',')
-	rex.torque_multiplier = ui.sldrMaxTorque.value()/100.0
-	rex.joint_angles[0]= float(wp_points[0])*D2R
-	rex.joint_angles[1]= float(wp_points[1])*D2R
-	rex.joint_angles[2]= float(wp_points[2])*D2R
-	rex.joint_angles[3]= float(wp_points[3])*D2R        	
-	rex.speed_multiplier[0] = ui.sldrSpeed.value()/100.0
-        rex.speed_multiplier[1] = ui.sldrSpeed.value()/100.0
-        rex.speed_multiplier[2] = ui.sldrSpeed.value()/100.0
-        rex.speed_multiplier[3] = ui.sldrSpeed.value()/100.0        		
-	current_motorstate = "motion"
-        rex.cmd_publish()
+        
+    def checkmotors(self,rex):
+	atol = 5.00 #do a formal way of selecting this tolerance
+	"""
+	print rex.joint_angles[0]*R2D-rex.joint_angles_fb[0]*R2D
+	print rex.joint_angles[1]*R2D-rex.joint_angles_fb[1]*R2D
+	print rex.joint_angles[2]*R2D-rex.joint_angles_fb[2]*R2D
+	print rex.joint_angles[3]*R2D-rex.joint_angles_fb[3]*R2D
+	"""	
+	if (isclose(rex.joint_angles[0]*R2D,rex.joint_angles_fb[0]*R2D,atol)):
+		if(isclose(rex.joint_angles[1]*R2D,rex.joint_angles_fb[1]*R2D,atol)):
+			if(isclose(rex.joint_angles[2]*R2D,rex.joint_angles_fb[2]*R2D,atol)):
+				if(isclose(rex.joint_angles[3]*R2D,rex.joint_angles_fb[3]*R2D,atol)):
+					if(rex.num_joints==4):
+						return True
+					elif(rex.num_joints==6):
+						if(isclose(rex.joint_angles[4]*R2D,rex.joint_angles_fb[4]*R2D,atol)):
+							if(isclose(rex.joint_angles[5]*R2D,rex.joint_angles_fb[5]*R2D,atol)):
+								return True
+							else:
+								print "motor 5 fails" + str(abs(rex.joint_angles[5]*R2D-rex.joint_angles_fb[5]*R2D)) + "angles are: " + str(rex.joint_angles[5]*R2D) + str(rex.joint_angles_fb[5]*R2D)
+								return False
+						else:
+							print "motor 4 fails" + str(abs(rex.joint_angles[4]*R2D-rex.joint_angles_fb[4]*R2D)) + "angles are: " + str(rex.joint_angles[4]*R2D) + str(rex.joint_angles_fb[4]*R2D)
+							return False
+							
+				else:
+					print "motor 3 fails" + str(abs(rex.joint_angles[3]*R2D-rex.joint_angles_fb[3]*R2D)) + "angles are: " + str(rex.joint_angles[3]*R2D) + str(rex.joint_angles_fb[3]*R2D)
+					return False
+			else:
+				print "motor 2 fails" + str(abs(rex.joint_angles[2]*R2D-rex.joint_angles_fb[2]*R2D)) + "angles are: " + str(rex.joint_angles[2]*R2D) + str(rex.joint_angles_fb[2]*R2D)
+				return False
+		else:
+			print "motor 1 fails" + str(abs(rex.joint_angles[1]*R2D-rex.joint_angles_fb[1]*R2D)) + "angles are: " + str(rex.joint_angles[1]*R2D) + str(rex.joint_angles_fb[1]*R2D)
+			return False
+	else:
+		print "motor 0 fails " + str(abs(rex.joint_angles[0]*R2D-rex.joint_angles_fb[0]*R2D)) + "angles are: " + str(rex.joint_angles[0]*R2D) + str(rex.joint_angles_fb[0]*R2D)
+		return False 	
 
 
     
-    def compute_via_points(self,ui,rex):
-	global current_action	
-	current_action = "computing"
-
-	f = open(folder+"wp_"+filename+".csv", "r")
-	wp_lines = f.readlines()
-	max_i = len(wp_lines)	
-	f.close()
-	wp = np.zeros([4,max_i])
-	sp = np.zeros([4,max_i])
+    def statemachine_check(self, ui, rex): #running at 100 ms
+	global current_mode, current_action, current_movement, current_motorstate, past_states, comp1_status, comp2_status,comp3_status, comp4_status,comp5_status, comp1, comp2,comp3, comp4,comp5
+	past_status = past_states[0]+", "+past_states[1]+", "+ past_states[2] + ", "+ past_states[3]
+	if(current_motorstate == "motion"):
+		if(self.checkmotors(rex)):
+			self.motor_idle(rex)
+	current_status = self.getmestatus(True)
 	
-	for i in range(0,max_i):
-		waypoints = wp_lines[i].split(',')
-		speedpoints = sp_lines[i].split(',')
-		wp[0,i]= float(waypoints[0]) #Note that you are storing here ulta. Not the normal convention
-		wp[1,i]= float(waypoints[1])
-		wp[2,i]= float(waypoints[2])
-		wp[3,i]= float(waypoints[3])        					
-		sp[0,i]= float(speedpoints[0])
-		sp[1,i]= float(speedpoints[1])
-		sp[2,i]= float(speedpoints[2])
-		sp[3,i]= float(speedpoints[3])        					
-		
-	f = open(folder+"wp_"+filename+"_c.csv", "a")
-	g = open(folder+"sp_"+filename+"_c.csv", "a")	
-	for i in range(0,max_i):
-		waypoints[0] = wp[0,i]; #local variable waypoints
-		waypoints[1] = wp[1,i];
-		waypoints[2] = wp[2,i];
-		waypoints[3] = wp[3,i];
-		speedpoints[0] = sp[0,i];
-		speedpoints[1] = sp[1,i];
-		speedpoints[2] = sp[2,i];
-		speedpoints[3] = sp[3,i];
-		f.writelines(str(waypoints[0])+ ',' + str(waypoints[1])+ ',' + str(waypoints[2])+ ',' + str(waypoints[3]) + '\n')
-		g.writelines(str(speedpoints[0])+ ',' + str(speedpoints[1])+ ',' + str(speedpoints[2])+ ',' + str(speedpoints[3]) + '\n')
-	g.close()
-	f.close()
+	if(current_status != past_status and current_motorstate == "idle"): 
+		print "current_status: " + current_status + "; past_status: " + past_status
+		print "current_motorstate: " + current_motorstate		
+		past_states = self.getmestatus(False)
 	
-    
-    def computespline(self,qf,q0,motor,tf=1000,tstep=100,t0=0,vf=0,v0=0): #time is in milliseconds, tstep 200 mseconds communication is 15 Hz so need min. 66 ms.
-	t = [x/1000.0 for x in range(t0,tf,tstep)] 	
-	N = len(t)	
-	conversion_factor = ToRPM/max_speed[motor] #to percentage of the max allowable speed of the motor
-	new_q = np.zeros(N)	
-	v = np.zeros(N)
-	b = np.array([q0, v0, qf, vf]).transpose()
-	M = np.array([[1, t[0], t[0]*t[0], t[0]*t[0]*t[0]], [0, 1, 2*t[0], 3*t[0]*t[0]], [1, t[-1], t[-1]*t[-1], t[-1]*t[-1]*t[-1]], [0, 1, 2*t[-1], 3*t[-1]*t[-1]]])
-	a = np.matmul(np.linalg.inv(M),b)
-	for i in range(0,N):
-		new_q[i] = a[0] + a[1]*t[i] + a[2]*t[i]*t[i] + a[3]*t[i]*t[i]*t[i]
-		v[i] = abs(a[1] + 2*a[2]*t[i] + 3*a[3]*t[i]*t[i])*conversion_factor 
-		
-	return [t,new_q,v,a]
+		if(current_mode == "testing"):
+			if(current_action == "picking"):			
+				self.picking(ui,rex)		
+			elif(current_action =="placing"):
+				self.placing(ui,rex)
+			elif(current_movement == "idle"):
+				self.action_idle()		
+				self.mode_idle()
+		elif(current_mode == "Competition 1"):
+			if(comp1_status == "idle"):
+				comp1_status = 'blue'
+						
+			if(current_action=="idle"):							
+				if (comp1_status=="blue"):
+					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")					
+					comp1_status = "red"
+					return 'red'
+				elif(comp1_status=="red"):
+					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
+					comp1_status = "green"					
+					return 'green'
+				elif(comp1_status == 'green'):
+					comp1_status = "idle"
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
+
+		elif(current_mode == "Competition 2"):
+			if(comp2 == -1):
+				comp2 = 0
+			print forwardKinematics(q[0],q[1],q[2],q[3])
+			print comp2	
+			if(current_action=="idle"):							
+				if (comp2==0):
+					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")					
+					comp2 = 1
+					return 'red'
+				elif(comp2 ==1):
+					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
+					comp2 = 2					
+					return 'green'
+				elif(comp2 == 2):
+					comp2 = -1
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
+		elif(current_mode == "Competition 3"):
+			if(comp3_status == "idle"):
+				comp3_status = 'blue'
+				comp3 = 0		
+			if(current_action=="idle"):							
+				if (comp3_status=="blue"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "black"
+					comp3 = 1
+					return 'black'
+				elif(comp3_status=="black"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "red"					
+					comp3 = 2					
+					return 'red'
+				elif (comp3_status=="red"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "orange"
+					comp3 = 3
+					return 'orange'
+				elif(comp3_status=="orange"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "yellow"					
+					comp3 = 4					
+					return 'yellow'
+				elif(comp3_status == 'yellow'):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "green"					
+					comp3 = 5					
+					return 'green'
+				elif(comp3_status=="green"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "violet"					
+					comp3 = 6					
+					return 'violet'
+				elif (comp3_status=="violet"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "pink"
+					comp3 = 7
+					return 'pink'
+				elif(comp3_status == 'pink'):
+					comp3_status = "idle"
+					comp3 = -1	
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
+		elif(current_mode == "Competition 4"):
+			if(comp4 == -1):
+				comp4 = 0
+				comp4_status = "blue"
+			print forwardKinematics(q[0],q[1],q[2],q[3])
+			print comp4	
+			if(current_action=="idle"):							
+				if (comp4_status=="blue"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "black"
+					comp4 = 1
+					return 'black'
+				elif(comp4_status=="black"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "red"					
+					comp4 = 2					
+					return 'red'
+				elif (comp4_status=="red"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "orange"
+					comp4 = 3
+					return 'orange'
+				elif(comp4_status=="orange"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "yellow"					
+					comp4 = 4					
+					return 'yellow'
+				elif(comp4_status == 'yellow'):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "green"					
+					comp4 = 5					
+					return 'green'
+				elif(comp4_status=="green"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "violet"					
+					comp4 = 6					
+					return 'violet'
+				elif (comp4_status=="violet"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "pink"
+					comp4 = 7
+					return 'pink'
+				elif(comp4_status == 'pink'):
+					comp4_status = "idle"
+					comp4 = -1	
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
+		elif(current_mode == "Competition 5"):
+			pass
+
+	return "none"
+
+
+    def picknplace(self,ui,rex):
+	global current_movement, current_action
+
+	if(current_action == "picking"):
+		if(current_movement == "idle"):
+			current_action = "placing"
+			current_movement = "placing"
+			self.set_placing_location()
+			self.placing(ui,rex)
+		else:
+			self.picking(ui,rex)
+
+	elif(current_action == "placing"):
+		if(current_movement == "idle"):
+			self.action_idle()
+		else:
+			self.placing(ui,rex)
 	
-    def trajectory(self):
-	f = open(folder+"wp_"+filename+"_c.csv", "r")
-	g = open(folder+"sp_"+filename+"_c.csv", "r")
-	sq_lines = f.readlines()		
-	sv_lines = g.readlines()				
-	g.close()		
-	f.close()
-
-	max_i = len(sq_lines)
-	sq = np.zeros([4,max_i])
-	sv = np.zeros([4,max_i])
-	stq = np.zeros(max_i)
-	stv = np.zeros(max_i)
-
-	for i in range(0,max_i):	
-		sqpoints = sq_lines[i].split(',')
-		sq[0,i]= float(sqpoints[0])
-		sq[1,i]= float(sqpoints[1])
-		sq[2,i]= float(sqpoints[2])
-		sq[3,i]= float(sqpoints[3])
-		stq[i]  = float(sqpoints[4])
-
-	for i in range(1,max_i):
-		svpoints = sv_lines[i].split(',')
-		sv[0,i]= float(svpoints[0])
-		sv[1,i]= float(svpoints[1])
-		sv[2,i]= float(svpoints[2])
-		sv[3,i]= float(svpoints[3])
-		stv[i] = float(svpoints[4])
-
-	f, (ax1,ax2) = pylab.subplots(2, sharex=True)    #Uncomment for a new figure plot
+    def set_placing_location(self):
+	if(current_mode=="Competition 1"):
+		new_q = [-q[0], q[1], q[2], q[3]]
+	if(current_mode=="Competition 2"):
+		new_q = [-q_comp[0][comp2], q_comp[1][comp2], q_comp[2][comp2], q_comp[3][comp2]]
+	if(current_mode=="Competition 3"):
+		new_q = [-q_comp[0][comp3], q_comp[1][comp3], q_comp[2][comp3], q_comp[3][comp3]]
+	if(current_mode=="Competition 4"):
+		new_q = [-q_comp[0][comp4], q_comp[1][comp4], q_comp[2][comp4], q_comp[3][comp4]]
+	if(current_mode=="Competition 5"):
+		new_q = [-q_comp[0][comp5], q_comp[1][comp5], q_comp[2][comp5], q_comp[3][comp5]]
 	
-	ax1.plot(stq,sq[0],'bo--',label='set base angle')	
-	ax1.plot(stq,sq[1],'gx--',label='set shoulder angle')	
-	ax1.plot(stq,sq[2],'r+--',label='set elbow angle')	
-	ax1.plot(stq,sq[3],'mv--',label='set wrist angle')	
-
-	box = ax1.get_position()
-	ax1.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-	ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))	
-	ax1.set_title('Motor Feedback and Set Waypoints (in degrees)')
-
-	ax2.plot(stv,sv[0],'bo--',label='set base speed')	
-	ax2.plot(stv,sv[1],'gx--',label='set shoulder speed')	
-	ax2.plot(stv,sv[2],'r+--',label='set elbow speed')	
-	ax2.plot(stv,sv[3],'mv--',label='set wrist speed')
-
-	box = ax2.get_position()
-	ax2.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-	ax2.legend(loc='center left', bbox_to_anchor=(1, 0.5))	
-	ax2.set_title('Estimated and Set Speed (in percentage)')
-
-	pylab.show()
+	self.setq(new_q,new_q,new_q)		
+	
 
 
+    def picking(self,ui,rex):
+	global current_movement
+	if(current_movement == "picking"):
+		#print "1"
+		self.hold(ui,rex)
+	elif(current_movement == "grabbing qi"):
+		#print "2"		
+		self.reach(ui,rex)
+	elif(current_movement == "grabbing q"):
+		#print "3"		
+		self.close(rex)
+	elif(current_movement == "shoulderlast grabbing q" or current_movement == "shoulderlast keeping q"):
+		#print "4"		
+		self.shoulderlast(rex)
+	elif(current_movement == "keeping q"):
+		#print "5"
+		self.open(rex)
+	elif(current_movement == "closing"):
+		#print "6"		
+		self.movement_idle()		
+	else:
+		pass#print "7:" + current_movement
+
+    def placing(self,ui,rex):
+	global current_movement
+	if(current_movement == "placing"):
+		self.hold(ui,rex)
+	elif(current_movement == "keeping qi"):
+		self.reach(ui,rex)
+	elif(current_movement == "shoulderlast keeping q"):
+		self.shoulderlast(rex)
+	elif(current_movement == "keeping q"):
+		self.open(rex)
+	elif(current_movement == "opening"):
+		current_movement = "shoulderfirst keeping qf"
+		self.shoulderfirst(rex)
+	elif(current_movement == "keeping qf"):
+		self.hold(ui,rex) 	
+
+
+	
+    def hold(self,ui,rex):
+	global current_motorstate, current_movement
+	if(rex.num_joints==6):	
+	
+		if(current_action == "picking"):
+			rex.joint_angles[5] = open_angle*D2R
+			current_movement = "grabbing qi"
+		else:
+			rex.joint_angles[5] = close_angle*D2R
+			if(current_movement == "keeping qf"):
+				self.movement_idle()
+			else:
+				current_movement = "keeping qi"
+
+		rex.joint_angles[4] = 0.0	
+	rex.joint_angles[0] = 0.0
+        rex.joint_angles[1] = 0.0
+        rex.joint_angles[2] = 0.0
+        rex.joint_angles[3] = 0.0
+	current_motorstate = "motion" 
+	rex.cmd_publish()
+
+    def reach(self,ui,rex):
+	global current_motorstate,current_movement
+	rex.joint_angles[0] = q[0]*D2R #goal_angles[0]*D2R
+	rex.joint_angles[2] = q[2]*D2R #goal_angles[2]*D2R
+        rex.joint_angles[3] = q[3]*D2R #goal_angles[3]*D2R
+	if(rex.num_joints==6):		
+		rex.joint_angles[4] = wrist_orientation
+	#if(abs(q[0])>90):
+	if(current_movement == "grabbing qi"):
+		current_movement = "shoulderlast grabbing q"
+	else:
+		current_movement = "shoulderlast keeping q"	
+	"""
+	else:
+	        rex.joint_angles[1] = q[1]*D2R  
+		if(current_movement == "grabbing qi"):
+			current_movement = "grabbing q"
+		else:
+			current_movement = "keeping q"
+	"""	
+	current_motorstate = "motion"	
+    	rex.cmd_publish()
+
+    def basefirst(self,rex):
+	global current_motorstate,current_movement
+	rex.joint_angles[0] = q[0]*D2R
+	current_motorstate = "motion"	
+    	rex.cmd_publish()
+
+    def shoulderlast(self,rex):
+	global current_motorstate,current_movement
+	rex.joint_angles[1] = q[1]*D2R
+	if(current_movement=="shoulderlast grabbing q"):
+		current_movement = "grabbing q"	
+	elif(current_movement=="shoulderlast keeping q"):	
+		current_movement = "keeping q"
+	current_motorstate = "motion"		
+	rex.cmd_publish()
+	
+    def shoulderfirst(self,rex):
+	global current_motorstate,current_movement
+	rex.joint_angles[1] = 0.0
+	if(current_movement=="shoulderfirst grabbing qf"):
+		current_movement = "grabbing qf"	
+	elif(current_movement=="shoulderfirst keeping qf"):	
+		current_movement = "keeping qf"
+	current_motorstate = "motion"		
+	rex.cmd_publish()
+
+
+    def close(self,rex):
+	global current_motorstate, current_movement
+	#print "Hello from pick"
+	if(rex.num_joints==6):	
+		rex.joint_angles[5] = close_angle*D2R
+	current_movement = "closing"   
+	current_motorstate = "motion"	 		
+	rex.cmd_publish()
+    	
+    def open(self,rex):
+	global current_motorstate, current_movement
+	if(rex.num_joints==6):	
+		rex.joint_angles[5] = open_angle*D2R
+	current_movement = "opening"
+	current_motorstate = "motion"	
+	rex.cmd_publish()
+	
+	
+	    		
