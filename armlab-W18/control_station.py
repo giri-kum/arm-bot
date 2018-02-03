@@ -9,7 +9,7 @@ from rexarm import Rexarm
 from video import Video
 from statemachine import Statemachine
 
-debug = False
+debug = True
 
 """ Radians to/from  Degrees conversions """
 D2R = 3.141592/180.0
@@ -26,9 +26,10 @@ putx = 0.0
 puty = 0.0
 putz = 0.0
 putangle = 0.0
-wrist_orientation = 0.0
+
 gripper_orientation = 180.0
 gripping_height = 0.5
+
 class Gui(QtGui.QMainWindow):
     """ 
     Main GUI Class
@@ -183,12 +184,6 @@ class Gui(QtGui.QMainWindow):
         update_gui function
         Continuously called by timer1 
         """
-	global gripper_orientation, wrist_orientation, gripping_height
-	gripper_orientation = self.statemachine.get_orientations(1)
-	wrist_orientation = self.statemachine.get_orientations(2)
-	gripping_height = self.statemachine.get_orientations(3) 
-	#print "[4]: "+ str(self.rex.joint_angles[4])
-	#print [gripper_orientation, wrist_orientation, gripping_height]
 	
         """ Renders the video frames
             Displays a dummy image if no video available
@@ -547,29 +542,9 @@ class Gui(QtGui.QMainWindow):
      
 	self.rex.cmd_publish()
 
-    def orientation(self,base,diagonal):
-	phi_arm=diagonal+90
-	print(phi_arm)
-	if phi_arm>180:
-		phi_arm=phi_arm-90
-	#Bottom Right Quadrant
-	if base>0 and base<=90:
-		return -((phi_arm-45)-base)
-	#Top Right Quadrant
-	if base>90 and base<180:
-		return -(base-(phi_arm-45))
-	#Bottom Left Quadrant
-	if base<0 and base>=-90:
-		return ((phi_arm-135)-base)
-	#Top Left Quadrant
-	if base<-90 and base>-180:
-		return (base-(phi_arm-225))
-
-
 
     def getheight(self,angle,action = "picking"):
 	placement_offset = 2 # in cm
-
 	if(angle-90<0.1):
 		gripping_height = 3
 	else:
@@ -580,25 +555,41 @@ class Gui(QtGui.QMainWindow):
 	return gripping_height
 
     def getIK(self,endCoord,angle=0,action = "picking"):
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
+	intermediate_height = 4
+	intermediate_angles = [0.0]*6
+	angles = [0.0]*6
+	[angles[0],angles[1],angles[2],angles[3]] = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
 	if(angles[0] == 0 and angles[1] == 0 and angles[2] == 0 and angles[3] == 0):
-		if(endCoord[3]-90<0.1):
+		if(abs(endCoord[3]-90)<0.1):
 			endCoord[3] = 180
 			angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
-			#wangle = self.trim_angle(self.orientation(angle*R2D,angles[0]))
-			#self.statemachine.set_orientations(wangle,2)
 		else:
 			endCoord[3] = 90
 			angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
-			#wangle = self.trim_angle(self.orientation(angle*R2D,angles[0]))
-			#self.statemachine.set_orientations(wangle,2)
+	
+	if(endCoord[3]==180):
+		intermediate_angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action)+intermediate_height,endCoord[3]) # assuming it is reachable	
+		angles[4] = -1*self.trim_angle(orientation(angles[0],angle*R2D))
+	else:		
+		angles[4] = 0
 
-	return angles
+	intermediate_angles[4] = angles[4]
+	angles[5] = endCoord[3]
+	intermediate_angles[5] = endCoord[3]
+	return [angles,intermediate_angles]
 
     def printfk(self,angles):
 	temp = forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	print "Forward Kinematics output =  " , str(temp[0]) ,str(temp[1]),str(temp[2]),str(temp[3])	
 	
+    def roundoff(self, angles):
+	angles[0] = round(self.trim_angle(angles[0]),2)
+	angles[1] = round(self.trim_angle(angles[1]),2)	
+	angles[2] = round(self.trim_angle(angles[2]),2)
+	angles[3] = round(self.trim_angle(angles[3]),2)
+	#angles[4] = round(self.trim_angle(angles[4]),2) Dont alter these two angles
+	#angles[5] = round(self.trim_angle(angles[5]),2)
+	return angles
 
 
     def pick(self): #Josh
@@ -609,23 +600,22 @@ class Gui(QtGui.QMainWindow):
 	#endCoord = [20.2, -16.1, 4.4,90]
 	#endCoord = [14.3, 19.4, 4.4,90]
 	endCoord = [blockx/10, blocky/10, (blockz)/10, gripper_orientation]		
-	angles = self.getIK(endCoord,angle)
+	[angles, intermediate_angles] = self.getIK(endCoord,angle)
 	if(debug):
 		print "Block detector output = ", [blockx, blocky, blockz, angle*R2D]
 		print "Input to Inverse Kinematics:" ,endCoord
+		print "Output of Inverse Kinematics: ",angles		
 		self.printfk(angles)
 		
-	angles[0] = round(self.trim_angle(angles[0]),2)
-	angles[1] = round(self.trim_angle(angles[1]),2)	
-	angles[2] = round(self.trim_angle(angles[2]),2)
-	angles[3] = round(self.trim_angle(angles[3]),2)
-	self.statemachine.setq(angles,angles,angles)
+	angles = self.roundoff(angles)
+	intermediate_angles = self.roundoff(intermediate_angles)
+	self.statemachine.setq(angles,intermediate_angles)
 	self.statemachine.setmystatus("testing", "picking","picking")#mode="testing",action="picking")
 	#self.statemachine.hold(self.ui,self.rex, angles,"picking")
     def place(self):
 
 	endCoord = [putx/10, puty/10, (putz)/10, gripper_orientation]	
-	angles = self.getIK(endCoord,putangle)
+	[angles,intermediate_angles] = self.getIK(endCoord,putangle)
 	
 	#wangle = (self.shortorientation((putangle)*R2D-45)-self.trim_angle(angles[0]))#self.shortorientation((angle)*R2D+45)
 	#self.statemachine.set_orientations(wangle,2)
@@ -634,11 +624,10 @@ class Gui(QtGui.QMainWindow):
 		print "Input to Inverse Kinematics:" ,endCoord
 		self.printfk(angles)
 	
-	angles[0] = round(self.trim_angle(angles[0]),2)
-	angles[1] = round(self.trim_angle(angles[1]),2)	
-	angles[2] = round(self.trim_angle(angles[2]),2)
-	angles[3] = round(self.trim_angle(angles[3]),2)
-	self.statemachine.setq(angles,angles,angles)
+	angles = self.roundoff(angles)
+	intermediate_angles = self.roundoff(intermediate_angles)
+
+	self.statemachine.setq(angles,intermediate_angles)
 	self.statemachine.setmystatus("testing", "placing","placing") #mode="testing",action="placing")	
 #	self.statemachine.hold(self.ui,self.rex, angles,"placing")
 
@@ -674,50 +663,37 @@ class Gui(QtGui.QMainWindow):
 	else:
 		endCoord = [(blockx)/10, (blocky)/10, (blockz+gripping_height)/10, gripper_orientation]
 		
-	angles = self.getIK(endCoord)
+	[angles,intermediate_angles] = self.getIK(endCoord)
 	#wangle = (self.shortorientation((angle)*R2D-45)-self.trim_angle(angles[0]))#self.shortorientation((angle)*R2D+45)
 	#self.statemachine.set_orientations(wangle,2)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	
-	angles[0] = round(self.trim_angle(angles[0]),2)
-	angles[1] = round(self.trim_angle(angles[1]),2)	
-	angles[2] = round(self.trim_angle(angles[2]),2)
-	angles[3] = round(self.trim_angle(angles[3]),2)
-	self.statemachine.setq(angles,angles,angles)
+	angles = self.roundoff(angles)
+	intermediate_angles = self.roundoff(intermediate_angles)
+	self.statemachine.setq(angles, intermediate_angles)
 
     def generatecomp2(self):
 	print "Entered generatecomp2"
-	new_q = np.zeros([4,3])
+	new_q = np.zeros([6,3])
+	new_qh = np.zeros([6,3])	
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
 	height = 40
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+ height*0)/10, gripper_orientation]	
-	angles = self.getIK(endCoord,"placing")
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
+	[angles,intermediate_angles] = self.getIK(endCoord,"placing")
 		
-	new_q[0][0] = round(self.trim_angle(angles[0]),2)
-	new_q[1][0] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][0] = round(self.trim_angle(angles[2]),2)
-	new_q[3][0] = round(self.trim_angle(angles[3]),2)
-		
+	new_q[0] = self.roundoff(angles)
+	new_qh[0] = self.roundoff(intermediate_angles)
+	
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+height*1)/10, gripper_orientation]	
-	angles = self.getIK(endCoord,"placing")
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-	new_q[0][1] = round(self.trim_angle(angles[0]),2)
-	new_q[1][1] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][1] = round(self.trim_angle(angles[2]),2)
-	new_q[3][1] = round(self.trim_angle(angles[3]),2)
+	[angles,intermediate_angles] = self.getIK(endCoord,"placing")
+	new_q[1] = self.roundoff(angles)
+	new_qh[1] = self.roundoff(intermediate_angles)
 	
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+height*2)/10, gripper_orientation]	
-	angles = self.getIK(endCoord,"placing")
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-	new_q[0][2] = round(self.trim_angle(angles[0]),2)
-	new_q[1][2] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][2] = round(self.trim_angle(angles[2]),2)
-	new_q[3][2] = round(self.trim_angle(angles[3]),2)
+	[angles,intermediate_angles] = self.getIK(endCoord,"placing")
+	new_q[2] = self.roundoff(angles)
+	new_qh[2] = self.roundoff(intermediate_angles)
 	
 	self.statemachine.setq_comp(new_q)
  
