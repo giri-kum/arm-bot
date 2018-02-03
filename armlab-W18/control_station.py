@@ -34,6 +34,7 @@ class Gui(QtGui.QMainWindow):
     the GUI and functions
     """
     def __init__(self,parent=None):
+	
         QtGui.QWidget.__init__(self,parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -145,16 +146,34 @@ class Gui(QtGui.QMainWindow):
     def estop(self):
         self.statemachine.estop(self.rex)
 
-    def trim_angle(self,q):
-	if(q>360 or q<-360):
+    def trim_angle(self,q,motorno = 1): #for 1,2,3
+	if(motorno > 2):
+		max_angle = 300
+	else:
+		max_angle = 360
+
+	if(q>max_angle or q<-1*max_angle):
 		new_q = 0
+		print "trimmed: " + str(q) + " motor no: " + str(motorno)
 	elif(q>180): #181 --> -179
 		new_q = q-360
+		print "trimmed: " + str(q) + " motor no: " + str(motorno)
 	elif(q<-180):
 		new_q = 360-q
+		print "trimmed: " + str(q) + " motor no: " + str(motorno)
 	else :
 		new_q = q
 	return new_q
+
+    def shortorientation(self,w_angle):
+	if(w_angle>90):
+		sw_angle = w_angle - 90
+	elif(w_angle<-90):
+		sw_angle = w_angle + 90
+	else:
+		sw_angle = w_angle	
+	return sw_angle
+
 
 
     def update_gui(self):
@@ -162,9 +181,11 @@ class Gui(QtGui.QMainWindow):
         update_gui function
         Continuously called by timer1 
         """
+	global gripper_orientation, wrist_orientation, gripping_height
 	gripper_orientation = self.statemachine.get_orientations(1)
 	wrist_orientation = self.statemachine.get_orientations(2)
 	gripping_height = self.statemachine.get_orientations(3) 
+	#print "[4]: "+ str(self.rex.joint_angles[4])
 	#print [gripper_orientation, wrist_orientation, gripping_height]
 	
         """ Renders the video frames
@@ -524,21 +545,64 @@ class Gui(QtGui.QMainWindow):
      
 	self.rex.cmd_publish()
 
+    def orientation(self,base,diagonal):
+	phi_arm=diagonal+90
+	print(phi_arm)
+	if phi_arm>180:
+		phi_arm=phi_arm-90
+	#Bottom Right Quadrant
+	if base>0 and base<=90:
+		return -((phi_arm-45)-base)
+	#Top Right Quadrant
+	if base>90 and base<180:
+		return -(base-(phi_arm-45))
+	#Bottom Left Quadrant
+	if base<0 and base>=-90:
+		return ((phi_arm-135)-base)
+	#Top Left Quadrant
+	if base<-90 and base>-180:
+		return (base-(phi_arm-225))
+
+
+
+    def getheight(self,angle,action = "picking"):
+	placement_offset = 2 # in cm
+
+	if(angle-90<0.1):
+		gripping_height = 3
+	else:
+		if(action == "picking"):
+			gripping_height = 0.05
+		elif(action == "placing"):
+			gripping_height = 0.05 + placement_offset
+	return gripping_height
+
+    def getIK(self,endCoord,angle=0,action = "picking"):
+	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
+	if(angles[0] == 0 and angles[1] == 0 and angles[2] == 0 and angles[3] == 0):
+		if(endCoord[3]-90<0.1):
+			endCoord[3] = 180
+			angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
+			wangle = self.trim_angle(self.orientation(angle*R2D,angles[0]))
+			self.statemachine.set_orientations(wangle,2)
+
+	return angles
+
 
     def pick(self): #Josh
 	global putx, puty, putz, putangle
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
-	print [blockx, blocky, blockz, angle]
+	print [blockx, blocky, blockz, angle*R2D]
 	#self.statemachine.setorientation(angle*R2D)
-	self.statemachine.set_orientations(angle*R2D,2)
 	[putx, puty, putz, putangle] = [-1*blockx, blocky, blockz, angle]
 	#endCoord = [20.2, -16.1, 4.4,90]
 	#endCoord = [14.3, 19.4, 4.4,90]
 	print "gripper_orientation: " + str(gripper_orientation)
-	endCoord = [blockx/10, blocky/10, (blockz+gripping_height)/10, gripper_orientation]		
+	endCoord = [blockx/10, blocky/10, (blockz)/10, gripper_orientation]		
 	print "endcoord:"
 	print endCoord
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord,angle)
+		
 	print "Forward Kinematics:"	
 	print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	
@@ -552,12 +616,14 @@ class Gui(QtGui.QMainWindow):
 	self.statemachine.setmystatus("testing", "picking","picking")#mode="testing",action="picking")
 	#self.statemachine.hold(self.ui,self.rex, angles,"picking")
     def place(self):
-	self.statemachine.set_orientations(putangle*R2D,2)
 	print [putx, puty, putz, putangle]
-	endCoord = [putx/10, puty/10, (putz+gripping_height)/10, gripper_orientation]	
+	endCoord = [putx/10, puty/10, (putz)/10, gripper_orientation]	
 	#print "endcoord:"
 	#print endCoord
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])		
+	angles = self.getIK(endCoord,putangle)
+	
+	#wangle = (self.shortorientation((putangle)*R2D-45)-self.trim_angle(angles[0]))#self.shortorientation((angle)*R2D+45)
+	#self.statemachine.set_orientations(wangle,2)
 	print "Forward Kinematics:"	
 	print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	
@@ -587,10 +653,13 @@ class Gui(QtGui.QMainWindow):
 	camera_coord = Z*cv2.undistortPoints(xy_in_rgb,self.video.intrinsic,self.video.distortion_array)
 	camera_coord_homogenous = np.transpose(np.append(camera_coord,[Z,1.0]))
 	world_coord_homogenous = np.dot(self.video.extrinsic, camera_coord_homogenous)
+	theta = np.arccos(self.video.extrinsic[0,0])
+	angle = angle - theta
 	return world_coord_homogenous[0], world_coord_homogenous[1], world_coord_homogenous[2], angle
 
     def getangles(self, color):
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord(color)
+	
 	[current_mode,current_action, current_movement, current_motorstate]=self.statemachine.getmestatus()
 	if(current_mode=="Competition 2"):
 		print "getangles for competition 2"
@@ -598,7 +667,9 @@ class Gui(QtGui.QMainWindow):
 	else:
 		endCoord = [(blockx)/10, (blocky)/10, (blockz+gripping_height)/10, gripper_orientation]
 		
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
+	#wangle = (self.shortorientation((angle)*R2D-45)-self.trim_angle(angles[0]))#self.shortorientation((angle)*R2D+45)
+	#self.statemachine.set_orientations(wangle,2)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	
@@ -612,8 +683,9 @@ class Gui(QtGui.QMainWindow):
 	print "Entered generatecomp2"
 	new_q = np.zeros([4,3])
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+gripping_height)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	height = 40
+	endCoord = [(blockx)/10, (blocky)/10, (blockz+ height*0)/10, gripper_orientation]	
+	angles = self.getIK(endCoord,"placing")
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 		
@@ -622,8 +694,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][0] = round(self.trim_angle(angles[2]),2)
 	new_q[3][0] = round(self.trim_angle(angles[3]),2)
 		
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+gripping_height*2)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(blockx)/10, (blocky)/10, (blockz+height*1)/10, gripper_orientation]	
+	angles = self.getIK(endCoord,"placing")
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][1] = round(self.trim_angle(angles[0]),2)
@@ -631,8 +703,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][1] = round(self.trim_angle(angles[2]),2)
 	new_q[3][1] = round(self.trim_angle(angles[3]),2)
 	
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+gripping_height*3)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(blockx)/10, (blocky)/10, (blockz+height*2)/10, gripper_orientation]	
+	angles = self.getIK(endCoord,"placing")
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][2] = round(self.trim_angle(angles[0]),2)
@@ -641,17 +713,18 @@ class Gui(QtGui.QMainWindow):
 	new_q[3][2] = round(self.trim_angle(angles[3]),2)
 	
 	self.statemachine.setq_comp(new_q)
-
-
+ 
     def generatecomp3(self):
 	print "Entered generatecomp3"
 	new_q = np.zeros([4,8])
 	h = gripping_height
-	b = 50
+	b = 10+30
+	x = -160
+	y = -130
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
 	
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*1)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(x)/10, (y)/10, (blockz+h*1)/10, gripper_orientation]	
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 		
@@ -660,8 +733,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][0] = round(self.trim_angle(angles[2]),2)
 	new_q[3][0] = round(self.trim_angle(angles[3]),2)
 		
-	endCoord = [(blockx+b*1)/10, (blocky)/10, (blockz+h)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(x+b*1)/10, (y)/10, (blockz+h)/10, gripper_orientation]	
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][1] = round(self.trim_angle(angles[0]),2)
@@ -669,8 +742,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][1] = round(self.trim_angle(angles[2]),2)
 	new_q[3][1] = round(self.trim_angle(angles[3]),2)
 	
-	endCoord = [(blockx+b*2)/10, (blocky)/10, (blockz+h)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(x+b*2)/10, (y)/10, (blockz+h)/10, gripper_orientation]	
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][2] = round(self.trim_angle(angles[0]),2)
@@ -678,8 +751,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][2] = round(self.trim_angle(angles[2]),2)
 	new_q[3][2] = round(self.trim_angle(angles[3]),2)
 
-	endCoord = [(blockx+b*3)/10, (blocky)/10, (blockz+h)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(x+b*3)/10, (y)/10, (blockz+h)/10, gripper_orientation]	
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 		
@@ -688,8 +761,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][3] = round(self.trim_angle(angles[2]),2)
 	new_q[3][3] = round(self.trim_angle(angles[3]),2)
 		
-	endCoord = [(blockx+b*4)/10, (blocky)/10, (blockz+h)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(x+b*4)/10, (y)/10, (blockz+h)/10, gripper_orientation]	
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][4] = round(self.trim_angle(angles[0]),2)
@@ -697,8 +770,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][4] = round(self.trim_angle(angles[2]),2)
 	new_q[3][4] = round(self.trim_angle(angles[3]),2)
 	
-	endCoord = [(blockx+b*5)/10, (blocky)/10, (blockz+h)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(x+b*5)/10, (y)/10, (blockz+h)/10, gripper_orientation]	
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][5] = round(self.trim_angle(angles[0]),2)
@@ -706,8 +779,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][5] = round(self.trim_angle(angles[2]),2)
 	new_q[3][5] = round(self.trim_angle(angles[3]),2)
 
-	endCoord = [(blockx+b*6)/10, (blocky)/10, (blockz+h)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(x+b*6)/10, (y)/10, (blockz+h)/10, gripper_orientation]	
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 		
@@ -716,8 +789,8 @@ class Gui(QtGui.QMainWindow):
 	new_q[2][6] = round(self.trim_angle(angles[2]),2)
 	new_q[3][6] = round(self.trim_angle(angles[3]),2)
 		
-	endCoord = [(blockx+b*7)/10, (blocky)/10, (blockz+h)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	endCoord = [(x+b*7)/10, (y)/10, (blockz+h)/10, gripper_orientation]	
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][7] = round(self.trim_angle(angles[0]),2)
@@ -735,7 +808,7 @@ class Gui(QtGui.QMainWindow):
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
 	
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*1)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 		
@@ -745,7 +818,7 @@ class Gui(QtGui.QMainWindow):
 	new_q[3][0] = round(self.trim_angle(angles[3]),2)
 		
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*2)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][1] = round(self.trim_angle(angles[0]),2)
@@ -754,7 +827,7 @@ class Gui(QtGui.QMainWindow):
 	new_q[3][1] = round(self.trim_angle(angles[3]),2)
 	
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*3)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][2] = round(self.trim_angle(angles[0]),2)
@@ -763,7 +836,7 @@ class Gui(QtGui.QMainWindow):
 	new_q[3][2] = round(self.trim_angle(angles[3]),2)
 
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*4)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 		
@@ -773,7 +846,7 @@ class Gui(QtGui.QMainWindow):
 	new_q[3][3] = round(self.trim_angle(angles[3]),2)
 		
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*5)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][4] = round(self.trim_angle(angles[0]),2)
@@ -782,7 +855,7 @@ class Gui(QtGui.QMainWindow):
 	new_q[3][4] = round(self.trim_angle(angles[3]),2)
 	
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*6)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][5] = round(self.trim_angle(angles[0]),2)
@@ -791,7 +864,7 @@ class Gui(QtGui.QMainWindow):
 	new_q[3][5] = round(self.trim_angle(angles[3]),2)
 
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*7)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 		
@@ -801,7 +874,7 @@ class Gui(QtGui.QMainWindow):
 	new_q[3][6] = round(self.trim_angle(angles[3]),2)
 		
 	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*8)/10, gripper_orientation]	
-	angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2],endCoord[3])
+	angles = self.getIK(endCoord)
 	#print "Forward Kinematics:"	
 	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
 	new_q[0][7] = round(self.trim_angle(angles[0]),2)
