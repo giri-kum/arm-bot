@@ -28,7 +28,6 @@ putz = 0.0
 putangle = 0.0
 
 gripper_orientation = 180.0
-gripping_height = 0.5
 
 class Gui(QtGui.QMainWindow):
     """ 
@@ -657,17 +656,9 @@ class Gui(QtGui.QMainWindow):
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord(color)
 	
 	[current_mode,current_action, current_movement, current_motorstate]=self.statemachine.getmestatus()
-	if(current_mode=="Competition 2"):
-		print "getangles for competition 2"
-		endCoord = [(blockx)/10, (blocky)/10, (blockz)/10, gripper_orientation]	
-	else:
-		endCoord = [(blockx)/10, (blocky)/10, (blockz+gripping_height)/10, gripper_orientation]
+	endCoord = [(blockx)/10, (blocky)/10, (blockz)/10, gripper_orientation]	
 		
-	[angles,intermediate_angles] = self.getIK(endCoord)
-	#wangle = (self.shortorientation((angle)*R2D-45)-self.trim_angle(angles[0]))#self.shortorientation((angle)*R2D+45)
-	#self.statemachine.set_orientations(wangle,2)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
+	[angles,intermediate_angles] = self.getIK(endCoord,"picking")
 	
 	angles = self.roundoff(angles)
 	intermediate_angles = self.roundoff(intermediate_angles)
@@ -695,7 +686,7 @@ class Gui(QtGui.QMainWindow):
 	new_q[2] = self.roundoff(angles)
 	new_qh[2] = self.roundoff(intermediate_angles)
 	
-	self.statemachine.setq_comp(new_q)
+	self.statemachine.setq_comp(new_q,new_qh)
  
     def generatecomp3(self):
 	print "Entered generatecomp3"
