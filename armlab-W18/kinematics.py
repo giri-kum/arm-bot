@@ -86,6 +86,24 @@ x,y,z are in cm!
 #DH- Davenit Hartenberg naming convention.
 #DH_zero position in real coordinates: [90,90,0,0]
 #real frame zero position in DH: [-90,-90,0,0]
+def orientation(base,diagonal):
+	phi_arm=diagonal+90
+	print(phi_arm)
+	if phi_arm>180:
+		phi_arm=phi_arm-90
+	#Bottom Right Quadrant
+	if base>0 and base<=90:
+		return -((phi_arm-45)-base)
+	#Top Right Quadrant
+	if base>90 and base<180:
+		return -(base-(phi_arm-45))
+	#Bottom Left Quadrant
+	if base<0 and base>=-90:
+		return ((phi_arm-135)-base)
+	#Top Left Quadrant
+	if base<-90 and base>-180:
+		return (base-(phi_arm-225))
+
 def forwardKinematics(jointAngle1, jointAngle2, jointAngle3, jointAngle4):
 	dh_Angles=worldFrame_to_DH(jointAngle1,jointAngle2,jointAngle3,jointAngle4)
 	dh_angle1=dh_Angles[0]
