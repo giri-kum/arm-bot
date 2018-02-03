@@ -163,3 +163,54 @@ def xTranslationMat(link_length):
 	T[0,3]=link_length
 	return T
 
+def add360ToNegativeAngle(angle):
+	if angle<0:
+		angle=angle+360
+	return angle
+
+def chooseWristRotation(sideAngle, base):
+	#sideAngle=add360ToNegativeAngle(sideAngle)
+	#base=add360ToNegativeAngle(base)
+	wristAngle=min(abs(sideAngle-base),abs(sideAngle-(180+base)) )
+	if wristAngle== abs(sideAngle-base):
+		return sideAngle-base
+	else:
+		return sideAngle-(180+base)
+
+def isCloseToVertical(angle):
+	if angle<0:
+		angle=angle+360
+	if angle<45:
+		return True
+	if angle>135 and angle<225:
+		return True
+	if angle>330 and angle<360:
+		return True
+	return False
+
+def isCloseToHorizontal(angle):
+	return not isCloseToVertical(angle)
+
+def orientation(base,diagonal):
+	phi_arm=diagonal+90
+	print(phi_arm)
+	if phi_arm>180:
+		phi_arm=phi_arm-90
+	#side1angle=(phi_arm-45)-base
+	#side2angle=abs((phi_arm+45)-base)
+	#wristAngle=min(abs((phi_arm-45)-base),abs(base-phi_arm+45))
+	#if wristAngle ==abs((phi_arm-45)-base):
+	#	return (phi_arm-45)-base
+	#else:
+	#	return(phi_arm+45)-base
+
+	if isCloseToVertical(base):
+		if isCloseToVertical(phi_arm-45):
+			return chooseWristRotation(phi_arm-45,base)
+		else:
+			return chooseWristRotation(phi_arm+45,base)
+	if isCloseToHorizontal(base):
+		if isCloseToHorizontal(phi_arm-45):
+			return chooseWristRotation(phi_arm-45,base)
+		else:
+			return chooseWristRotation(phi_arm+45,base)
