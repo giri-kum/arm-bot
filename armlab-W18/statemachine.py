@@ -24,7 +24,7 @@ comp3 = -1 # 0,1,2,
 comp4 = -1 # 0,1,2,
 comp5 = -1 # 0,1,2,
 close_angle = -60
-open_angle = 180
+open_angle = 90
 past_status = ""
 past_states = [""]*4
 qi = [0.0]*6
@@ -38,6 +38,7 @@ gripper_orientation = 180.0
 gripping_height = 0.05 # in cm
 q_comp = np.zeros([4,3])
 debug = False
+debug_motor= True
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
 	if(usec):
@@ -79,13 +80,13 @@ class Statemachine():
     def set_orientations(self,value,n=1):
 	global gripper_orientation, wrist_orientation, gripper_height
 	if(n==1):
-		print "gripper_orientation set: " + str(value)
+		print "gripper_orientation changed from: " + str(gripper_orientation) + " to " + str(value)
 		gripper_orientation = value
 	elif(n==2):
-		print "wrist_orientation set: " + str(value)
+		print "wrist_orientation changed from: " + str(wrist_orientation) + " to " + str(value)
 		wrist_orientation = value
 	elif(n==3):
-		print "gripping_height set: " + str(value)
+		print "gripping_height changed from: " + str(gripping_height) + " to " + str(value)
 		gripping_height = value
 
     def setq_comp(self,new_q_comp):
@@ -157,28 +158,28 @@ class Statemachine():
 							elif(isclose(rex.joint_angles[5]*R2D,rex.joint_angles_fb[5]*R2D,atol) and current_wristpos != "closed"):
 								return True
 							else:
-								if(debug):
+								if(debug_motor):
 									print "motor 5 fails" + str(abs(rex.joint_angles[5]*R2D-rex.joint_angles_fb[5]*R2D)) + "angles are: " + str(rex.joint_angles[5]*R2D) + str(rex.joint_angles_fb[5]*R2D)
 								return False
 						else:
-							if(debug):		
+							if(debug_motor):		
 								print "motor 4 fails" + str(abs(rex.joint_angles[4]*R2D-rex.joint_angles_fb[4]*R2D)) + "angles are: " + str(rex.joint_angles[4]*R2D) + str(rex.joint_angles_fb[4]*R2D)
 							return False
 							
 				else:
-					if(debug):
+					if(debug_motor):
 						print "motor 3 fails" + str(abs(rex.joint_angles[3]*R2D-rex.joint_angles_fb[3]*R2D)) + "angles are: " + str(rex.joint_angles[3]*R2D) + str(rex.joint_angles_fb[3]*R2D)
 					return False
 			else:
-				if(debug):
+				if(debug_motor):
 					print "motor 2 fails" + str(abs(rex.joint_angles[2]*R2D-rex.joint_angles_fb[2]*R2D)) + "angles are: " + str(rex.joint_angles[2]*R2D) + str(rex.joint_angles_fb[2]*R2D)
 				return False
 		else:
-			if(debug):
+			if(debug_motor):
 				print "motor 1 fails" + str(abs(rex.joint_angles[1]*R2D-rex.joint_angles_fb[1]*R2D)) + "angles are: " + str(rex.joint_angles[1]*R2D) + str(rex.joint_angles_fb[1]*R2D)
 			return False
 	else:
-		if(debug):
+		if(debug_motor):
 			print "motor 0 fails " + str(abs(rex.joint_angles[0]*R2D-rex.joint_angles_fb[0]*R2D)) + "angles are: " + str(rex.joint_angles[0]*R2D) + str(rex.joint_angles_fb[0]*R2D)
 		return False 	
 
@@ -193,8 +194,7 @@ class Statemachine():
 	current_status = self.getmestatus(True)
 	
 	if(current_status != past_status and current_motorstate == "idle"): 
-		print "current_status: " + current_status + "; past_status: " + past_status
-		print "current_motorstate: " + current_motorstate		
+		#print "current_status: " + current_status + "; past_status: " + past_status
 		past_states = self.getmestatus(False)
 	
 		if(current_mode == "testing"):
@@ -446,7 +446,7 @@ class Statemachine():
 	rex.joint_angles[2] = q[2]*D2R #goal_angles[2]*D2R
         rex.joint_angles[3] = q[3]*D2R #goal_angles[3]*D2R
 	if(rex.num_joints==6):
-		print "wrist: " + str(wrist_orientation)		
+		#print "wrist: " + str(wrist_orientation)		
 		rex.joint_angles[4] = wrist_orientation*D2R
 	#if(abs(q[0])>90):
 	if(current_movement == "grabbing qi"):
