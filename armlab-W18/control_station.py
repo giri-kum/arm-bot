@@ -9,6 +9,8 @@ from rexarm import Rexarm
 from video import Video
 from statemachine import Statemachine
 
+debug = False
+
 """ Radians to/from  Degrees conversions """
 D2R = 3.141592/180.0
 R2D = 180.0/3.141592
@@ -478,7 +480,7 @@ class Gui(QtGui.QMainWindow):
 		tmp_coord = np.float32([[self.video.extrinsic_cal_pixel_coord[0]],[self.video.extrinsic_cal_pixel_coord[1]],[self.video.extrinsic_cal_pixel_coord[2]]])
 		camera_coord = 941.0*cv2.undistortPoints(tmp_coord,self.video.intrinsic,self.video.distortion_array)
 		rot_rad = -1.0*np.arctan2((camera_coord[1][0][1]-camera_coord[0][0][1]),(camera_coord[1][0][0]-camera_coord[0][0][0]))
-		print rot_rad
+		print "rotation in degrees = ", rot_rad*R2D
 		if rot_rad < 0:
 		    z_rot = rot_rad + 0.5*np.pi
 		else:
@@ -491,7 +493,7 @@ class Gui(QtGui.QMainWindow):
 		self.video.extrinsic = np.concatenate((tmp, np.float32([[0., 0., 0., 1.]])),axis = 0)
 		#self.video.writecaldata(self.video.extrinsic)
 		self.video.inv_extrinsic = np.linalg.inv(self.video.extrinsic)
-		print self.video.extrinsic
+		print "Extrinsic Matrix = ", self.video.extrinsic
 		self.video.extrinsic_cal_flag = 2
 
 
@@ -583,31 +585,36 @@ class Gui(QtGui.QMainWindow):
 		if(endCoord[3]-90<0.1):
 			endCoord[3] = 180
 			angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
-			wangle = self.trim_angle(self.orientation(angle*R2D,angles[0]))
-			self.statemachine.set_orientations(wangle,2)
+			#wangle = self.trim_angle(self.orientation(angle*R2D,angles[0]))
+			#self.statemachine.set_orientations(wangle,2)
+		else:
+			endCoord[3] = 90
+			angles = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
+			#wangle = self.trim_angle(self.orientation(angle*R2D,angles[0]))
+			#self.statemachine.set_orientations(wangle,2)
 
 	return angles
+
+    def printfk(self,angles):
+	temp = forwardKinematics(angles[0],angles[1],angles[2],angles[3])
+	print "Forward Kinematics output =  " , str(temp[0]) ,str(temp[1]),str(temp[2]),str(temp[3])	
+	
 
 
     def pick(self): #Josh
 	global putx, puty, putz, putangle
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
-	print [blockx, blocky, blockz, angle*R2D]
 	#self.statemachine.setorientation(angle*R2D)
 	[putx, puty, putz, putangle] = [-1*blockx, blocky, blockz, angle]
 	#endCoord = [20.2, -16.1, 4.4,90]
 	#endCoord = [14.3, 19.4, 4.4,90]
-	print "gripper_orientation: " + str(gripper_orientation)
 	endCoord = [blockx/10, blocky/10, (blockz)/10, gripper_orientation]		
-	print "endcoord:"
-	print endCoord
 	angles = self.getIK(endCoord,angle)
+	if(debug):
+		print "Block detector output = ", [blockx, blocky, blockz, angle*R2D]
+		print "Input to Inverse Kinematics:" ,endCoord
+		self.printfk(angles)
 		
-	print "Forward Kinematics:"	
-	print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-	
-	#print "angles:"
-	#print angle
 	angles[0] = round(self.trim_angle(angles[0]),2)
 	angles[1] = round(self.trim_angle(angles[1]),2)	
 	angles[2] = round(self.trim_angle(angles[2]),2)
@@ -616,16 +623,16 @@ class Gui(QtGui.QMainWindow):
 	self.statemachine.setmystatus("testing", "picking","picking")#mode="testing",action="picking")
 	#self.statemachine.hold(self.ui,self.rex, angles,"picking")
     def place(self):
-	print [putx, puty, putz, putangle]
+
 	endCoord = [putx/10, puty/10, (putz)/10, gripper_orientation]	
-	#print "endcoord:"
-	#print endCoord
 	angles = self.getIK(endCoord,putangle)
 	
 	#wangle = (self.shortorientation((putangle)*R2D-45)-self.trim_angle(angles[0]))#self.shortorientation((angle)*R2D+45)
 	#self.statemachine.set_orientations(wangle,2)
-	print "Forward Kinematics:"	
-	print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
+	if(debug):
+		print "Placing according to Block detector output = ", [putx, puty, putz, putangle*R2D]
+		print "Input to Inverse Kinematics:" ,endCoord
+		self.printfk(angles)
 	
 	angles[0] = round(self.trim_angle(angles[0]),2)
 	angles[1] = round(self.trim_angle(angles[1]),2)	
@@ -638,7 +645,7 @@ class Gui(QtGui.QMainWindow):
 
     def get_color_block_world_coord(self,color): #Josh
 	self.video.blockDetector()
-	[blockx_rgb, blocky_rgb], angle = self.video.color_detection(color)
+	[blockx_rgb, blocky_rgb, angle] = self.video.color_detection(color)
 	xy_in_rgb = np.float32([[[blocky_rgb,blockx_rgb]]]) #Josh
 	xy_in_rgb_homogenous = np.array([blocky_rgb,blockx_rgb,1.0])
 	xy_in_dep = np.dot(self.video.rgb2dep_aff_matrix, xy_in_rgb_homogenous) #Josh
@@ -914,8 +921,9 @@ class Gui(QtGui.QMainWindow):
 	if(self.ui.btnUser1.text()=="Configure Servos"):
         	self.rex.cfg_publish_default()
 	elif(self.ui.btnUser1.text()=="Competition 1"):
-		self.getangles('blue')		
-		self.statemachine.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
+		if(self.sanity_check(1)):
+			self.getangles('blue')		
+			self.statemachine.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
 		
     def btn2(self): 
 	if(self.ui.btnUser2.text()=="Depth and RGB Calibration"):
@@ -948,9 +956,20 @@ class Gui(QtGui.QMainWindow):
 		self.generatecomp5()
 		self.getangles('blue')		
 		self.statemachine.setmystatus("Competition 5", "picking","picking")#mode="testing",action="picking")	
+
+
+    def sanity_check(self,comp):
+	
+	if(comp == 1): #search for red,blue,green 
+		colors = ["red","blue","green"]
+		[pos_colors, success] = self.video.blockDetector(colors)
+		if(success):
+			return True
+		else:
+			return False
 	
 			
-"""main function"""
+    """main function"""
 def main():
     app = QtGui.QApplication(sys.argv)
     app_window = Gui()
