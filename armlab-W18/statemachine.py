@@ -27,18 +27,14 @@ close_angle = -60
 open_angle = 90
 past_status = ""
 past_states = [""]*4
-qi = [0.0]*6
-qf = [0.0]*6
-q  = [0.0]*6
+q  = [0.0]*6 #where last q[5] is gripper orientation should not be fed to last motor directly 
+qh = [0.0]*6 #higher q
 closing_threshold = abs(close_angle) - 18
 #picking = "True"
 #mode ="normal"
-wrist_orientation = 0.0
-gripper_orientation = 180.0
-gripping_height = 0.05 # in cm
 q_comp = np.zeros([4,3])
-debug = False
-debug_motor= True
+debug = True
+debug_motor= False
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
 	if(usec):
@@ -56,18 +52,12 @@ def isclose(x,y,tol):
 
 class Statemachine():
     timerCallback = functools.partial(gen_timestamp)
-    def setorientation(self, w_orient, g_orient=gripper_orientation,gripper=False):
-	global wrist_orientation, gripper_orientation
-	wrist_orientation = w_orient
-	if(gripper):
-		gripper_orientation = g_orient
-
-    def setq(self,new_qi,new_q,new_qf):
-	global qi, q, qf
-	qi = new_qi
+    
+    def setq(self,new_q,new_qh = [0.0]*4):
+	global q, qh
 	q  = new_q
-	qf = new_qf
-		
+	qh = new_qh
+"""		
     def get_orientations(self,n=1):
 	#print [gripper_orientation, wrist_orientation, gripping_height]
 	if(n==1):
@@ -88,7 +78,7 @@ class Statemachine():
 	elif(n==3):
 		print "gripping_height changed from: " + str(gripping_height) + " to " + str(value)
 		gripping_height = value
-
+"""
     def setq_comp(self,new_q_comp):
 	global q_comp
 	q_comp = new_q_comp
@@ -194,7 +184,8 @@ class Statemachine():
 	current_status = self.getmestatus(True)
 	
 	if(current_status != past_status and current_motorstate == "idle"): 
-		#print "current_status: " + current_status + "; past_status: " + past_status
+		if(debug):
+			print "current_status: " + current_status + "; past_status: " + past_status
 		past_states = self.getmestatus(False)
 	
 		if(current_mode == "testing"):
@@ -364,6 +355,7 @@ class Statemachine():
     def set_placing_location(self):
 	if(current_mode=="Competition 1"):
 		new_q = [-q[0], q[1], q[2], q[3]]
+		new_qh = [-qh[0], qh[1], qh[2], qh[3]]		
 	if(current_mode=="Competition 2"):
 		new_q = [-q_comp[0][comp2], q_comp[1][comp2], q_comp[2][comp2], q_comp[3][comp2]]
 	if(current_mode=="Competition 3"):
@@ -373,29 +365,47 @@ class Statemachine():
 	if(current_mode=="Competition 5"):
 		new_q = [-q_comp[0][comp5], q_comp[1][comp5], q_comp[2][comp5], q_comp[3][comp5]]
 	
-	self.setq(new_q,new_q,new_q)		
+	self.setq(new_q,new_qh)		
 	
+
+    def goingtomove(self,rex):
+	global	current_movement, current_motorstate
+	rex.joint_angles[0] = qh[0]*D2R
+	rex.joint_angles[1] = qh[1]*D2R
+	rex.joint_angles[2] = qh[2]*D2R
+	rex.joint_angles[3] = qh[3]*D2R
+	if(current_action == "picking"):
+		current_movement = "grabbing q"
+	elif(current_action == "placing"):
+		current_movement = "shoulderfirst keeping qf"
+	current_motorstate = "motion"		
+	rex.cmd_publish()
 
 
     def picking(self,ui,rex):
 	global current_movement
+	
 	if(current_movement == "picking"):
 		#print "1"
+		if(abs(q[5]-180) < 0.001): # interchange q and qh
+			self.setq(qh,q)
 		self.hold(ui,rex)
 	elif(current_movement == "grabbing qi"):
 		#print "2"		
 		self.reach(ui,rex)
-	elif(current_movement == "grabbing q"):
+	elif(current_movement == "shoulderlast grabbing q"):
 		#print "3"		
-		self.close(rex)
-	elif(current_movement == "shoulderlast grabbing q" or current_movement == "shoulderlast keeping q"):
-		#print "4"		
 		self.shoulderlast(rex)
-	elif(current_movement == "keeping q"):
-		#print "5"
-		self.open(rex)
+	elif(current_movement == "going to grab"):
+		#print "4"		
+		self.goingtomove(rex)
+	elif(current_movement == "grabbing q"):
+		#print "5"		
+		self.close(rex)
 	elif(current_movement == "closing"):
-		#print "6"		
+		#print "6"
+		if(abs(q[5]-180) < 0.001): # interchange q and qh back
+			self.setq(qh,q)			
 		self.movement_idle()		
 	else:
 		pass#print "7:" + current_movement
@@ -409,9 +419,15 @@ class Statemachine():
 	elif(current_movement == "shoulderlast keeping q"):
 		self.shoulderlast(rex)
 	elif(current_movement == "keeping q"):
-		self.open(rex)
+		self.open(rex)	
 	elif(current_movement == "opening"):
-		current_movement = "shoulderfirst keeping qf"
+		if(abs(q[5]-180) < 0.001):
+			current_movement = "going to leave"
+			self.goingtomove(rex)
+		else:
+			current_movement = "shoulderfirst keeping qf"
+			self.shoulderfirst(rex)
+	elif(current_movement == "shoulderfirst keeping qf"):
 		self.shoulderfirst(rex)
 	elif(current_movement == "keeping qf"):
 		self.hold(ui,rex) 	
@@ -421,7 +437,6 @@ class Statemachine():
     def hold(self,ui,rex):
 	global current_motorstate, current_movement
 	if(rex.num_joints==6):	
-	
 		if(current_action == "picking"):
 			rex.joint_angles[5] = open_angle*D2R
 			current_movement = "grabbing qi"
@@ -446,8 +461,7 @@ class Statemachine():
 	rex.joint_angles[2] = q[2]*D2R #goal_angles[2]*D2R
         rex.joint_angles[3] = q[3]*D2R #goal_angles[3]*D2R
 	if(rex.num_joints==6):
-		#print "wrist: " + str(wrist_orientation)		
-		rex.joint_angles[4] = wrist_orientation*D2R
+		rex.joint_angles[4] = q[4]*D2R
 	#if(abs(q[0])>90):
 	if(current_movement == "grabbing qi"):
 		current_movement = "shoulderlast grabbing q"
@@ -474,11 +488,16 @@ class Statemachine():
 	global current_motorstate,current_movement
 	rex.joint_angles[1] = q[1]*D2R
 	if(current_movement=="shoulderlast grabbing q"):
-		current_movement = "grabbing q"	
+		if(abs(q[5]-180) < 0.001):
+			current_movement = "going to grab"
+		else:
+			current_movement = "grabbing q"	
 	elif(current_movement=="shoulderlast keeping q"):	
 		current_movement = "keeping q"
 	current_motorstate = "motion"		
 	rex.cmd_publish()
+
+   
 	
     def shoulderfirst(self,rex):
 	global current_motorstate,current_movement
