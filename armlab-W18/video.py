@@ -4,6 +4,13 @@ from PyQt4 import QtGui, QtCore, Qt
 import freenect
 import matplotlib.pyplot as plt
 
+debug = False
+def ce(pos): # Giri ce = check error
+	if(pos[0]-0 < 0.001 and pos[1]-0 < 0.001 and pos[2]-0 < 0.001):
+		return True
+	else:
+		return False
+
 class Video():
     def __init__(self):
         self.currentVideoFrame=np.array([])
@@ -165,7 +172,7 @@ class Video():
         """
         pass
     
-    def blockDetector(self): #Josh
+    def blockDetector(self,colors = "any"): #Josh
         """
         TODO:
         Implement your block detector here.  
@@ -216,16 +223,31 @@ class Video():
 		self.blobs_box_pts.append(box_points)
 		cv2.drawContours(im2,[box_points],0,(255,255,255),2)
 	cv2.imwrite('contours.jpg',im2)
-	self.color_detection("black")
-	self.color_detection("red")
-	self.color_detection("green")
-	self.color_detection("blue")
-	self.color_detection("pink")
-	self.color_detection("orange")
-	self.color_detection("violet")
-	self.color_detection("yellow")
-	#self.color_detection("all")
-	print "color finished!"
+	if(colors=="any"):
+		pos_colors = np.zeros([8,3])	
+		pos_colors[0] = self.color_detection("black")
+		pos_colors[1] = self.color_detection("red")
+		pos_colors[2] = self.color_detection("green")
+		pos_colors[3] = self.color_detection("blue")
+		pos_colors[4] = self.color_detection("pink")
+		pos_colors[5] = self.color_detection("orange")
+		pos_colors[6] = self.color_detection("violet")
+		pos_colors[7] = self.color_detection("yellow")
+		if(ce(pos_colors[0]) and ce(pos_colors[1]) and ce(pos_colors[2]) and ce(pos_colors[3]) and ce(pos_colors[4]) and ce(pos_colors[5]) and ce(pos_colors[6]) and ce(pos_colors[7])):
+			print "No color found"
+			return [np.zeros([8,3]),False]
+		else:
+			return [pos_colors,True]
+	else:
+		n = len(colors)
+		pos_colors = np.zeros([n,3])
+		for i in range(0,len(colors)):
+			pos_colors[i] = self.color_detection(colors[i]) 			
+			if(ce(pos_colors[i])):
+				print colors[i] + " not found"
+				return [np.zeros([n,3]),False]
+		return [pos_colors,True] 
+
 
     def color_detection(self, color_str = 'blue'): #Josh
 
@@ -280,9 +302,9 @@ class Video():
 		    #cv2.imwrite('opening {}.jpg'.format(count),close)
 		    #cv2.imwrite('mask {}.jpg'.format(count),mask)
 		    cv2.drawContours(RGB_image,[box_points],0,(255,255,255),2)
-		    print color_str + 'found!'
+		    print color_str + 'found at: ', [centerx, centery, angle_yoverx] 
 		    cv2.imwrite('color_test {} .jpg'.format(color_str),RGB_image)
-		    return [centerx, centery], angle_yoverx
+		    return [centerx, centery, angle_yoverx]
 	    
 	    
 	#if (color_str == 'black' or color_str == 'blue' or color_str == 'orange' or color_str == 'green' or color_str == 'violet' or color_str == 'yellow' or color_str == 'pink' or color_str == 'all'): 
@@ -324,10 +346,10 @@ class Video():
 			if(centerx<=40 and centery<=40):
 			    continue
 			cv2.drawContours(RGB_image,[box_points],0,(255,255,255),2)
-			print color_str + 'found!'
+			print color_str + 'found at: ', [centerx, centery, angle_yoverx] 
 			cv2.imwrite('color_test {} .jpg'.format(color_str),RGB_image)
-			return [centerx, centery], angle_yoverx
-	return [0.,0.], 0.
+			return [centerx, centery, angle_yoverx]
+	return [0.,0., 0.]
 
 	
 
