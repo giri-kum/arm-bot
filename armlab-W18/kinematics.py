@@ -63,13 +63,21 @@ def inverseKinematics(x,y,z,phi):
 		theta3=(pi-arccos(theta3arg))*180/pi
 	
 	theta4=phi-theta2-theta3 #wrist angle.
-	if theta2>128:
-	    print("theta2 is greater than 128 degrees. Limit on elbow is 128 degrees.")
-	    print(theta2)
-	if theta3>121:
-	    print("theta3 is greater than 121 degrees. Limit on elbow is 121 degrees.")
+
+	if abs(theta2)>128:
+	    print("theta2 is greater than 128 degrees. Limit on shoulder is 128 degrees.")
 	    print(theta2)
 	    return array([0,0,0,0])
+
+	if abs(theta3)>121:
+	    print("theta3 is greater than 121 degrees. Limit on elbow is 121 degrees.")
+	    print(theta3)
+	    return array([0,0,0,0])
+	if abs(theta4)>120:
+	    print("theta4 is greater than 121 degrees. Limit on wrist is 121 degrees.")
+	    print(theta3)
+	    return array([0,0,0,0])
+	
 	print 	[theta1,theta2,theta3,theta4]
 	return array([theta1,theta2,theta3,theta4])
 '''
@@ -86,24 +94,6 @@ x,y,z are in cm!
 #DH- Davenit Hartenberg naming convention.
 #DH_zero position in real coordinates: [90,90,0,0]
 #real frame zero position in DH: [-90,-90,0,0]
-def orientation(base,diagonal):
-	phi_arm=diagonal+90
-	print(phi_arm)
-	if phi_arm>180:
-		phi_arm=phi_arm-90
-	#Bottom Right Quadrant
-	if base>0 and base<=90:
-		return -((phi_arm-45)-base)
-	#Top Right Quadrant
-	if base>90 and base<180:
-		return -(base-(phi_arm-45))
-	#Bottom Left Quadrant
-	if base<0 and base>=-90:
-		return ((phi_arm-135)-base)
-	#Top Left Quadrant
-	if base<-90 and base>-180:
-		return (base-(phi_arm-225))
-
 def forwardKinematics(jointAngle1, jointAngle2, jointAngle3, jointAngle4):
 	dh_Angles=worldFrame_to_DH(jointAngle1,jointAngle2,jointAngle3,jointAngle4)
 	dh_angle1=dh_Angles[0]
