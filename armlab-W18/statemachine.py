@@ -331,7 +331,26 @@ class Statemachine():
 			else:
 				self.picknplace(ui,rex)
 		elif(current_mode == "Competition 5"):
-			pass
+			if(comp5_status == "idle"):
+				if(q[0] == 0 and q[1] == 0 and q[2] == 0 and q[3] == 0):
+					comp5_status = "not found"
+				else:
+					comp5_status = 'all'
+					comp5 = 0		
+			if(current_action=="idle"):							
+				if(q[0] == 0 and q[1] == 0 and q[2] == 0 and q[3] == 0):
+					comp5_status = "not found"
+				if(comp5_status=="all"):
+					self.setmystatus("Competition 5", "picking","picking")#mode="testing",action="picking")	
+					comp5_status = "all"					
+					comp5 = comp5+1					
+					return 'all'
+				elif(comp5_status == 'not found'):
+					comp5_status = "idle"
+					comp5 = -1	
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
 
 	return "none"
 
@@ -371,8 +390,8 @@ class Statemachine():
 		new_q = [q_comp[comp4][0], q_comp[comp4][1], q_comp[comp4][2], q_comp[comp4][3],q_comp[comp4][4],q_comp[comp4][5]]
 		new_qh = [qh_comp[comp4][0], qh_comp[comp4][1], qh_comp[comp4][2], qh_comp[comp4][3],qh_comp[comp4][4],q_comp[comp4][5]]
 	if(current_mode=="Competition 5"):
-		new_q = [-q_comp[0][comp5], q_comp[1][comp5], q_comp[2][comp5], q_comp[3][comp5]]
-	
+		new_q = [q_comp[comp5][0], q_comp[comp5][1], q_comp[comp5][2], q_comp[comp5][3],q_comp[comp5][4],q_comp[comp5][5]]
+		new_qh = [qh_comp[comp5][0], qh_comp[comp5][1], qh_comp[comp5][2], qh_comp[comp5][3],qh_comp[comp5][4],q_comp[comp5][5]]	
 	self.setq(new_q,new_qh)		
 
     def goingtomove(self,rex):
