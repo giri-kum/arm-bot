@@ -245,55 +245,54 @@ class Statemachine():
 			print comp4	
 			if(current_action=="idle"):							
                 if (comp4_status=="yellow"):
+                    self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
                     comp4_status="green"
                     comp4=1
                     return 'green'
                 if (comp4_status=="green"):
+                    self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
                     comp4_status="blue"
                     comp4=2
                     return 'blue'
                 if (comp4_status=="blue"):
+                    self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
                     comp4_status="violet"
                     comp4=3
                     return 'violet'
                 if (comp4_status=="violet"):
-                    comp4_status=="blue"
+                    self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+                    comp4_status=="black"
                     comp4=5
-                    return 'blue'
-				if (comp4_status=="blue"):
-					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
-					comp4_status = "black"
-					comp4 = 6
-					return 'black'
+                    return 'black'
 				elif(comp4_status=="black"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "red"					
-					comp4 = 7					
+					comp4 = 6					
 					return 'red'
 				elif (comp4_status=="red"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
 					comp4_status = "orange"
-					comp4 = 8
+					comp4 = 7
 					return 'orange'
 				elif(comp4_status=="orange"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "yellow"					
-					comp4 = 9					
+					comp4 = 8					
 					return 'yellow'
 				elif(comp4_status == 'yellow'):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "green"					
-					comp4 = 10					
+					comp4 = 9					
 					return 'green'
 				elif(comp4_status=="green"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "violet"					
-					comp4 = 11					
+					comp4 = 10					
 					return 'violet'
 				elif (comp4_status=="violet"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
 					comp4_status = "pink"
-					comp4 = 12
+					comp4 = 11
 					return 'pink'
 				elif(comp4_status == 'pink'):
 					comp4_status = "idle"
@@ -350,6 +349,74 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
+	    '''
+	    elif(current_mode == "Competition 3"):
+			if(comp3_status == "idle"):
+				comp3_status = 'black'
+				comp3 = 0		
+			if(current_action=="idle"):
+                elif (comp3_status=="yellow"):
+                    self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")
+                    comp3_status="green"
+                    comp3=1
+                    return 'green'
+                elif (comp3_status=="green"):
+                    self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")
+                    comp3_status="blue"
+                    comp3=2
+                    return 'blue'
+                elif (comp3_status=="blue"):
+                    self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")
+                    comp3_status="violet"
+                    comp3=3
+                    return 'violet'
+                elif (comp3_status=="violet"):
+                    self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")
+                    comp3_status="black"
+                    comp3=4
+                    return 'black'
+				elif(comp3_status=="black"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "red"					
+					comp3 = 5					
+					return 'red'
+				elif (comp3_status=="red"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "orange"
+					comp3 = 6
+					return 'orange'
+				elif(comp3_status=="orange"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "yellow"					
+					comp3 = 7					
+					return 'yellow'
+				elif(comp3_status == 'yellow'):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "green"					
+					comp3 = 8					
+					return 'green'
+				elif(comp3_status=="green"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "blue"					
+					comp3 = 9					
+					return 'blue'
+				elif (comp3_status=="blue"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "violet"
+					comp3 = 10
+					return 'violet'
+				elif (comp3_status=="violet"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "pink"
+					comp3 = 11
+					return 'pink'
+				elif(comp3_status == 'pink'):
+					comp3_status = "idle"
+					comp3 = -1	
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
+	    '''
 		elif(current_mode == "Competition 3"):
 			if(comp3_status == "idle"):
 				comp3_status = 'black'
