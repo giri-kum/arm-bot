@@ -79,8 +79,8 @@ class Video():
 	self.blobs_angle_rgb = []
 	self.blobs_info_rgb = []
 	#due to light from roof, yellow shows 0,0,254 in hsv color space. red goes to two ends of hsv spectral, needs to consider seperately
-	self.hsv_lower_hsv = [[0.,9.,15.],[4.,180.,200.],[20.,90.,200.],[40.,30.,75.],[110.,50.,80.],[130.,70.,60.],[164.,150.,170.],[0.,0.,0.]] #Josh
-	self.hsv_upper_hsv = [[180.,243.,75.],[20.,255.,255.],[39.,255.,255.],[85.,200.,210.],[129.,255.,255.],[168.,190.,160.],[173.,210.,255.],[180.,255.,255.]] #Josh
+	self.hsv_lower_hsv = [[0.,9.,15.],[4.,100.,100.],[20.,90.,200.],[40.,30.,75.],[110.,50.,80.],[130.,70.,60.],[164.,150.,170.],[0.,0.,0.]] #Josh
+	self.hsv_upper_hsv = [[180.,243.,90.],[20.,255.,255.],[39.,255.,255.],[85.,200.,210.],[129.,255.,255.],[168.,190.,160.],[173.,210.,255.],[180.,255.,255.]] #Josh
 	self.hsv_colors = ['black','orange','yellow','green','blue','violet','pink','all']
 
 
@@ -223,6 +223,7 @@ class Video():
 		self.blobs_box_pts.append(box_points)
 		cv2.drawContours(im2,[box_points],0,(255,255,255),2)
 	cv2.imwrite('contours.jpg',im2)
+	
 	if(colors=="any"):
 		pos_colors = np.zeros([8,3])	
 		pos_colors[0] = self.color_detection("black")
@@ -254,6 +255,10 @@ class Video():
 				print colors + " not found"
 				return [np.zeros([1,3]),False]		
 		return [pos_colors,True] 
+	"""
+	self.color_detection("orange")
+	print "color finish"
+	"""
 
     def color_detection(self, color_str = 'blue'): #Josh
 
@@ -277,7 +282,7 @@ class Video():
 	    print "enter red"
 	    upper_bound1 = np.array([180.,255.,255.])
 	    lower_bound1 = np.array([170.,163.,80.])
-	    upper_bound2 = np.array([5.,255.,255.])
+	    upper_bound2 = np.array([3.,255.,255.])
 	    lower_bound2 = np.array([0.,163.,80.])
 	    count = 0
 	    for box_points in self.blobs_box_pts_rgb_frame:
@@ -377,7 +382,7 @@ class Video():
 		    #cv2.circle(test_hsv,(centerx, centery), 2, (255,255,255), -1)
 	    #cv2.imwrite('test_center.jpg',test_hsv)
 		    window = hsv_image[centerx-3:centerx+4, centery-3:centery+4]
-		    #print window
+		    print window
 		    #restore = cv2.cvtColor(window, cv2.COLOR_HSV2BGR)
 		    #cv2.imwrite('window_restore.jpg',restore)
 		    mask = cv2.inRange(window, lower_bound, upper_bound)
