@@ -8,9 +8,11 @@ a2=10 #link2 length
 a3=10.1 #link3 length
 a4=13#10.86#11.1#11.1 before#11 #link4 length
 origin_offset = [0.7,-1,0] #in cm
+debug = False
 #Inverse kinematics accepts variables in cm and degrees!
 def inverseKinematics(x,y,z,phi):
-	print "x,y,z:" + str(x) + "," + str(y) + "," + str(z)
+	if(debug):	
+		print "x,y,z from IK:" + str(x) + "," + str(y) + "," + str(z)
 	x = x+origin_offset[0]
 	y = y+origin_offset[1] 		
 	z=z-d1
@@ -22,24 +24,21 @@ def inverseKinematics(x,y,z,phi):
 		rw=r-a4*sin(phi*pi/180)
 		zw=z-a4*cos(phi*pi/180) #z coordinate of point w
 	else:
-		print "r: " + str(r)
-		print "a: " + str(a4*sin(phi*pi/180))		
 		rw=r-a4*sin(phi*pi/180)
 		zw=z-a4*cos(phi*pi/180)
-		print "rw: " + str(rw)
 		#phi=-phi
 		#zw=z-a4*abs(cos(phi*pi/180)) #z coordinate of point w
-	print "r: " + str(r)
-	print "a: " + str(a4*sin(phi*pi/180))		
-	print "rw: " + str(rw)
-		
+	if(debug):
+		print "r: " + str(r)
+		print "a: " + str(a4*sin(phi*pi/180))		
+		print "rw: " + str(rw)
+				
 	alpha=arctan2(zw,rw) #used to calculate other angles is in radians
 	betaarg=(rw**2 +zw**2 +a2**2-a3**2)/(2*a2*sqrt(rw**2 +zw**2) )
 	if betaarg>=-1 and betaarg<=1:
 		pass
 	else:
-		print("Pose cannot be reached. Betaarg is outside of -1 to 1")
-		print(betaarg)
+		print "Pose cannot be reached. Betaarg is outside of -1 to 1, betaarg = ", betaarg
 		return array([0,0,0,0])
 	#if betaarg is less than 0, or greater than pi, handle problem.
 	beta=arccos(betaarg) #beta is in radians
@@ -52,8 +51,7 @@ def inverseKinematics(x,y,z,phi):
 	if theta3arg>=-1 and theta3arg<=1:
 		pass
 	else:
-		print("Pose cannot be reached. Theta3arg is outside of -1 to 1")
-		print(theta3arg)
+		print "Pose cannot be reached. Theta3arg is outside of -1 to 1, theta3arg = ", theta3arg
 		return array([0,0,0,0])
 
 	#if theta3arg is less than 0, or greater than pi, handle problem.
@@ -65,20 +63,18 @@ def inverseKinematics(x,y,z,phi):
 	theta4=phi-theta2-theta3 #wrist angle.
 
 	if abs(theta2)>128:
-	    print("theta2 is greater than 128 degrees. Limit on shoulder is 128 degrees.")
-	    print(theta2)
+	    print "theta2 is greater than 128 degrees. Limit on shoulder is 128 degrees, theta2 = ", theta2
 	    return array([0,0,0,0])
 
 	if abs(theta3)>121:
-	    print("theta3 is greater than 121 degrees. Limit on elbow is 121 degrees.")
-	    print(theta3)
+	    print "theta3 is greater than 121 degrees. Limit on elbow is 121 degrees, theta3 = ", theta3
 	    return array([0,0,0,0])
 	if abs(theta4)>120:
-	    print("theta4 is greater than 121 degrees. Limit on wrist is 121 degrees.")
-	    print(theta3)
+	    print "theta4 is greater than 121 degrees. Limit on wrist is 121 degrees, theta4 = ", theta4
 	    return array([0,0,0,0])
 	
-	print 	[theta1,theta2,theta3,theta4]
+	if(debug):
+		print "Output of IK = ", [theta1,theta2,theta3,theta4]
 	return array([theta1,theta2,theta3,theta4])
 '''
 forwardKinematics:
@@ -163,6 +159,8 @@ def xTranslationMat(link_length):
 	T[0,3]=link_length
 	return T
 
+
+
 def add360ToNegativeAngle(angle):
 	if angle<0:
 		angle=angle+360
@@ -193,7 +191,7 @@ def isCloseToHorizontal(angle):
 
 def orientation(base,diagonal):
 	phi_arm=diagonal+90
-	print(phi_arm)
+	print "Phi_arm = " ,phi_arm
 	if phi_arm>180:
 		phi_arm=phi_arm-90
 	#side1angle=(phi_arm-45)-base
@@ -214,3 +212,4 @@ def orientation(base,diagonal):
 			return chooseWristRotation(phi_arm-45,base)
 		else:
 			return chooseWristRotation(phi_arm+45,base)
+
