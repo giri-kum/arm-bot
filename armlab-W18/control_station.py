@@ -774,87 +774,58 @@ class Gui(QtGui.QMainWindow):
 
     def generatecomp4(self):
 	print "Entered generatecomp4"
-	new_q = np.zeros([4,8])
-	h = gripping_height
+	new_q = np.zeros([8,6])
+	new_qh = np.zeros([8,6]) #intermediate heights
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
-	
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*1)/10, gripper_orientation]	
-	angles = self.getIK(endCoord)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
+	final_x = blockx
+	final_y = blocky	
+	height = 40
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*0)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
 		
-	new_q[0][0] = round(self.trim_angle(angles[0]),2)
-	new_q[1][0] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][0] = round(self.trim_angle(angles[2]),2)
-	new_q[3][0] = round(self.trim_angle(angles[3]),2)
-		
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*2)/10, gripper_orientation]	
-	angles = self.getIK(endCoord)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-	new_q[0][1] = round(self.trim_angle(angles[0]),2)
-	new_q[1][1] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][1] = round(self.trim_angle(angles[2]),2)
-	new_q[3][1] = round(self.trim_angle(angles[3]),2)
+	new_q[0] = self.roundoff(angles)
+	new_qh[0] = self.roundoff(intermediate_angles)
 	
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*3)/10, gripper_orientation]	
-	angles = self.getIK(endCoord)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-	new_q[0][2] = round(self.trim_angle(angles[0]),2)
-	new_q[1][2] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][2] = round(self.trim_angle(angles[2]),2)
-	new_q[3][2] = round(self.trim_angle(angles[3]),2)
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*1)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[1] = self.roundoff(angles)
+	new_qh[1] = self.roundoff(intermediate_angles)
+	print "Genereated FK: ", forwardKinematics(new_q[1][0],new_q[1][1],new_q[1][2],new_q[1][3])
+			
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*2)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[2] = self.roundoff(angles)
+	new_qh[2] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*3)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+		
+	new_q[3] = self.roundoff(angles)
+	new_qh[3] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*4)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[4] = self.roundoff(angles)
+	new_qh[4] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*5)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[5] = self.roundoff(angles)
+	new_qh[5] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*6)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+		
+	new_q[6] = self.roundoff(angles)
+	new_qh[6] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*7)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[7] = self.roundoff(angles)
+	new_qh[7] = self.roundoff(intermediate_angles)	
 
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*4)/10, gripper_orientation]	
-	angles = self.getIK(endCoord)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-		
-	new_q[0][3] = round(self.trim_angle(angles[0]),2)
-	new_q[1][3] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][3] = round(self.trim_angle(angles[2]),2)
-	new_q[3][3] = round(self.trim_angle(angles[3]),2)
-		
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*5)/10, gripper_orientation]	
-	angles = self.getIK(endCoord)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-	new_q[0][4] = round(self.trim_angle(angles[0]),2)
-	new_q[1][4] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][4] = round(self.trim_angle(angles[2]),2)
-	new_q[3][4] = round(self.trim_angle(angles[3]),2)
+	self.statemachine.setq_comp(new_q,new_qh)
 	
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*6)/10, gripper_orientation]	
-	angles = self.getIK(endCoord)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-	new_q[0][5] = round(self.trim_angle(angles[0]),2)
-	new_q[1][5] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][5] = round(self.trim_angle(angles[2]),2)
-	new_q[3][5] = round(self.trim_angle(angles[3]),2)
-
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*7)/10, gripper_orientation]	
-	angles = self.getIK(endCoord)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-		
-	new_q[0][6] = round(self.trim_angle(angles[0]),2)
-	new_q[1][6] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][6] = round(self.trim_angle(angles[2]),2)
-	new_q[3][6] = round(self.trim_angle(angles[3]),2)
-		
-	endCoord = [(blockx)/10, (blocky)/10, (blockz+h*8)/10, gripper_orientation]	
-	angles = self.getIK(endCoord)
-	#print "Forward Kinematics:"	
-	#print forwardKinematics(angles[0],angles[1],angles[2],angles[3])
-	new_q[0][7] = round(self.trim_angle(angles[0]),2)
-	new_q[1][7] = round(self.trim_angle(angles[1]),2)	
-	new_q[2][7] = round(self.trim_angle(angles[2]),2)
-	new_q[3][7] = round(self.trim_angle(angles[3]),2)
-	
-	self.statemachine.setq_comp(new_q)
-
 
     def competition(self):
 	if(self.ui.btnUser11.text() == "Enter Competition Mode"):
@@ -893,9 +864,10 @@ class Gui(QtGui.QMainWindow):
 	if(self.ui.btnUser2.text()=="Depth and RGB Calibration"):
         	self.deprgb_cali()
 	elif(self.ui.btnUser2.text()=="Competition 2"):
-		self.generatecomp2()
-		self.getangles('blue')		
-		self.statemachine.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
+		if(self.sanity_check(2)):
+			self.generatecomp2()
+			self.getangles('blue')		
+			self.statemachine.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
 		
     def btn3(self): 
 	if(self.ui.btnUser3.text()=="Extrinsic Calibration"):
@@ -909,9 +881,10 @@ class Gui(QtGui.QMainWindow):
 	if(self.ui.btnUser4.text()=="Block Detector"):
         	self.video.blockDetector()
 	elif(self.ui.btnUser4.text()=="Competition 4"):
-		self.generatecomp4()
-		self.getangles('blue')		
-		self.statemachine.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+		if(self.sanity_check(3)):
+			self.generatecomp4()
+			self.getangles('blue')		
+			self.statemachine.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 	
     def btn5(self): 
 	if(self.ui.btnUser5.text()=="Repeat"):
@@ -923,14 +896,15 @@ class Gui(QtGui.QMainWindow):
 
 
     def sanity_check(self,comp):
-	
-	if(comp == 1): #search for red,blue,green 
+	success = False	
+	if(comp == 1 or comp == 2): #search for red,blue,green 
 		colors = ["red","blue","green"]
 		[pos_colors, success] = self.video.blockDetector(colors)
-		if(success):
-			return True
-		else:
-			return False
+	elif(comp == 4 or comp == 3): #search for red,blue,green 
+		colors = ["red","blue","green","orange","violet","black","yellow","pink"]
+		[pos_colors, success] = self.video.blockDetector(colors)
+		
+	return success
 	
 			
     """main function"""
