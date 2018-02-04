@@ -236,6 +236,72 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
+	'''
+		elif(current_mode == "Competition 4"):
+			if(comp4 == -1):
+				comp4 = 0
+				comp4_status = "yellow"
+			print forwardKinematics(q[0],q[1],q[2],q[3])
+			print comp4	
+			if(current_action=="idle"):							
+                if (comp4_status=="yellow"):
+                    comp4_status="green"
+                    comp4=1
+                    return 'green'
+                if (comp4_status=="green"):
+                    comp4_status="blue"
+                    comp4=2
+                    return 'blue'
+                if (comp4_status=="blue"):
+                    comp4_status="violet"
+                    comp4=3
+                    return 'violet'
+                if (comp4_status=="violet"):
+                    comp4_status=="blue"
+                    comp4=5
+                    return 'blue'
+				if (comp4_status=="blue"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "black"
+					comp4 = 6
+					return 'black'
+				elif(comp4_status=="black"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "red"					
+					comp4 = 7					
+					return 'red'
+				elif (comp4_status=="red"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "orange"
+					comp4 = 8
+					return 'orange'
+				elif(comp4_status=="orange"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "yellow"					
+					comp4 = 9					
+					return 'yellow'
+				elif(comp4_status == 'yellow'):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "green"					
+					comp4 = 10					
+					return 'green'
+				elif(comp4_status=="green"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
+					comp4_status = "violet"					
+					comp4 = 11					
+					return 'violet'
+				elif (comp4_status=="violet"):
+					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
+					comp4_status = "pink"
+					comp4 = 12
+					return 'pink'
+				elif(comp4_status == 'pink'):
+					comp4_status = "idle"
+					comp4 = -1	
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
+	   ''' 
 		elif(current_mode == "Competition 4"):
 			if(comp4 == -1):
 				comp4 = 0
