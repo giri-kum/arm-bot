@@ -751,15 +751,78 @@ class Gui(QtGui.QMainWindow):
 
     def generatecomp4(self):
 	print "Entered generatecomp4"
+	#new_q=np.zeros([12,6])
+	#new_qh=np.zeros([12,6])
 	new_q = np.zeros([8,6])
 	new_qh = np.zeros([8,6]) #intermediate heights
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
 	final_x = 0
 	final_y = -220
 	height = 40
+'''	
+	endCoord=[-20,-5,height/10,90]
+	[angles, intermediate_angles]=self.getIK(endCoord,0,"placing")
+	new_q[0]=self.roundoff(angles)
+	new_qh[0]=self.roundoff(intermediate_angles)
+	
+	endCoord=[20,-5,height/10,90]
+	[angles, intermediate_angles]=self.getIK(endCoord,0,"placing")
+	new_q[1]=self.roundoff(angles)
+	new_qh[1]=self.roundoff(intermediate_angles)
+
+	endCoord=[-17.4,-10,height/10,90]
+	[angles, intermediate_angles]=self.getIK(endCoord,0,"placing")
+	new_q[2]=self.roundoff(angles)
+	new_qh[2]=self.roundoff(intermediate_angles)
+
+    endCoord=[17.4,-10,height/10,90]
+	[angles, intermediate_angles]=self.getIK(endCoord,0,"placing")
+	new_q[3]=self.roundoff(angles)
+	new_qh[3]=self.roundoff(intermediate_angles)
+    
 	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*0)/10, gripper_orientation]	
 	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
 		
+	new_q[4] = self.roundoff(angles)
+	new_qh[4] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*1)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[5] = self.roundoff(angles)
+	new_qh[5] = self.roundoff(intermediate_angles)
+	print "Genereated FK: ", forwardKinematics(new_q[1][0],new_q[1][1],new_q[1][2],new_q[1][3])
+			
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*2)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[6] = self.roundoff(angles)
+	new_qh[6] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*3)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+		
+	new_q[7] = self.roundoff(angles)
+	new_qh[7] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*4)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[8] = self.roundoff(angles)
+	new_qh[8] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*5)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	new_q[9] = self.roundoff(angles)
+	new_qh[9] = self.roundoff(intermediate_angles)
+	
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*6)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+	# hard code joints angles down below here	
+	#new_q[6] = self.roundoff(angles)
+	#new_qh[6] = self.roundoff(intermediate_angles)
+	new_q[10] = [1.,10.,55.,19.0,0,90.]
+	new_qh[10] = [1.,18.,33.5,21.,0,90.]
+	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*0)/10, gripper_orientation]	
+	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
+'''		
 	new_q[0] = self.roundoff(angles)
 	new_qh[0] = self.roundoff(intermediate_angles)
 	
