@@ -32,8 +32,8 @@ qh = [0.0]*6 #higher q
 closing_threshold = abs(close_angle) - 18
 #picking = "True"
 #mode ="normal"
-q_comp = np.zeros([6,3])
-q_comp = np.zeros([6,3])
+q_comp = np.zeros([3,6]) #3 blocks and 6 motors. Way to encode block position in terms of angles.
+qh_comp = np.zeros([3,6]) #qh_comp- way to encode the intermediate location of the block before grabbing it.
 debug = True
 debug_motor= False
 def gen_timestamp(usec=False): #Giri
@@ -355,12 +355,15 @@ class Statemachine():
 			self.placing(ui,rex)
 	
     def set_placing_location(self):
+	#set_placing_location: for each competition, set_placing_location determines where to place the block.
 	if(current_mode=="Competition 1"):
-		new_q = [-q[0], q[1], q[2], q[3]]
-		new_qh = [-qh[0], qh[1], qh[2], qh[3]]		
+		new_q = [-q[0], q[1], q[2], q[3], q[4], q[5]]
+		new_qh = [-qh[0], qh[1], qh[2], qh[3], qh[4], qh[5] ]		
 	if(current_mode=="Competition 2"):
-		new_q = [-q_comp[0][comp2], q_comp[1][comp2], q_comp[2][comp2], q_comp[3][comp2]]
-		new_qh = [-qh_comp[0][comp2], qh_comp[1][comp2], qh_comp[2][comp2], qh_comp[3][comp2]]
+		#Competition 2: place blocks based on the mirrored position of the blue block.
+		print q_comp
+		new_q = [q_comp[0][comp2], q_comp[1][comp2], q_comp[2][comp2], q_comp[3][comp2],q_comp[4][comp2],q_comp[5][comp2]]
+		new_qh = [qh_comp[0][comp2], qh_comp[1][comp2], qh_comp[2][comp2], qh_comp[3][comp2],qh_comp[4][comp2],qh_comp[5][comp2]]
 	if(current_mode=="Competition 3"):
 		new_q = [-q_comp[0][comp3], q_comp[1][comp3], q_comp[2][comp3], q_comp[3][comp3]]
 	if(current_mode=="Competition 4"):
