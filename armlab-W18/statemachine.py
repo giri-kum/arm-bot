@@ -23,8 +23,9 @@ comp2 = -1 # 0,1,2,
 comp3 = -1 # 0,1,2,
 comp4 = -1 # 0,1,2,
 comp5 = -1 # 0,1,2,
-close_angle = -60
+close_angle = -40
 open_angle = 90
+closeinbetween = True # for hold state gripper angle  set after picked or placed
 past_status = ""
 past_states = [""]*4
 q  = [0.0]*6 #where last q[5] is gripper orientation should not be fed to last motor directly 
@@ -236,71 +237,6 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
-	'''
-		elif(current_mode == "Competition 4"):
-			if(comp4 == -1):
-				comp4 = 0
-				comp4_status = "yellow"
-			print forwardKinematics(q[0],q[1],q[2],q[3])
-			print comp4	
-			if(current_action=="idle"):							
-                if (comp4_status=="yellow"):
-                    self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
-                    comp4_status="green"
-                    comp4=1
-                    return 'green'
-                if (comp4_status=="green"):
-                    self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
-                    comp4_status="blue"
-                    comp4=2
-                    return 'blue'
-                if (comp4_status=="blue"):
-                    self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
-                    comp4_status="violet"
-                    comp4=3
-                    return 'violet'
-                if (comp4_status=="violet"):
-                    self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
-                    comp4_status=="black"
-                    comp4=5
-                    return 'black'
-				elif(comp4_status=="black"):
-					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
-					comp4_status = "red"					
-					comp4 = 6					
-					return 'red'
-				elif (comp4_status=="red"):
-					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
-					comp4_status = "orange"
-					comp4 = 7
-					return 'orange'
-				elif(comp4_status=="orange"):
-					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
-					comp4_status = "yellow"					
-					comp4 = 8					
-					return 'yellow'
-				elif(comp4_status == 'yellow'):
-					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
-					comp4_status = "green"					
-					comp4 = 9					
-					return 'green'
-				elif(comp4_status=="green"):
-					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
-					comp4_status = "violet"					
-					comp4 = 10					
-					return 'violet'
-				elif (comp4_status=="violet"):
-					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
-					comp4_status = "pink"
-					comp4 = 11
-					return 'pink'
-				elif(comp4_status == 'pink'):
-					comp4_status = "idle"
-					comp4 = -1	
-					self.mode_idle()
-			else:
-				self.picknplace(ui,rex)
-	   ''' 
 		elif(current_mode == "Competition 4"):
 			if(comp4 == -1):
 				comp4 = 0
@@ -349,74 +285,6 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
-	    '''
-	    elif(current_mode == "Competition 3"):
-			if(comp3_status == "idle"):
-				comp3_status = 'black'
-				comp3 = 0		
-			if(current_action=="idle"):
-                elif (comp3_status=="yellow"):
-                    self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")
-                    comp3_status="green"
-                    comp3=1
-                    return 'green'
-                elif (comp3_status=="green"):
-                    self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")
-                    comp3_status="blue"
-                    comp3=2
-                    return 'blue'
-                elif (comp3_status=="blue"):
-                    self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")
-                    comp3_status="violet"
-                    comp3=3
-                    return 'violet'
-                elif (comp3_status=="violet"):
-                    self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")
-                    comp3_status="black"
-                    comp3=4
-                    return 'black'
-				elif(comp3_status=="black"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
-					comp3_status = "red"					
-					comp3 = 5					
-					return 'red'
-				elif (comp3_status=="red"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
-					comp3_status = "orange"
-					comp3 = 6
-					return 'orange'
-				elif(comp3_status=="orange"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
-					comp3_status = "yellow"					
-					comp3 = 7					
-					return 'yellow'
-				elif(comp3_status == 'yellow'):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
-					comp3_status = "green"					
-					comp3 = 8					
-					return 'green'
-				elif(comp3_status=="green"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
-					comp3_status = "blue"					
-					comp3 = 9					
-					return 'blue'
-				elif (comp3_status=="blue"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
-					comp3_status = "violet"
-					comp3 = 10
-					return 'violet'
-				elif (comp3_status=="violet"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
-					comp3_status = "pink"
-					comp3 = 11
-					return 'pink'
-				elif(comp3_status == 'pink'):
-					comp3_status = "idle"
-					comp3 = -1	
-					self.mode_idle()
-			else:
-				self.picknplace(ui,rex)
-	    '''
 		elif(current_mode == "Competition 3"):
 			if(comp3_status == "idle"):
 				comp3_status = 'black'
@@ -542,12 +410,11 @@ class Statemachine():
 
 
     def picking(self,ui,rex):
-	global current_movement
-	
+	global current_movement, closeinbetween
 	if(current_movement == "picking"):
 		#print "1"
-		if(abs(q[5]-180) < 0.001): # interchange q and qh
-			self.setq(qh,q)
+		closeinbetween = True
+		self.setq(qh,q)
 		self.hold(ui,rex)
 	elif(current_movement == "grabbing qi"):
 		#print "2"		
@@ -563,14 +430,13 @@ class Statemachine():
 		self.close(rex)
 	elif(current_movement == "closing"):
 		#print "6"
-		if(abs(q[5]-180) < 0.001): # interchange q and qh back
-			self.setq(qh,q)			
+		self.setq(qh,q)			
 		self.movement_idle()		
 	else:
 		pass#print "7:" + current_movement
 
     def placing(self,ui,rex):
-	global current_movement
+	global current_movement,closeinbetween
 	if(current_movement == "placing"):
 		self.hold(ui,rex)
 	elif(current_movement == "keeping qi"):
@@ -580,12 +446,9 @@ class Statemachine():
 	elif(current_movement == "keeping q"):
 		self.open(rex)	
 	elif(current_movement == "opening"):
-		if(abs(q[5]-180) < 0.001):
-			current_movement = "going to leave"
-			self.goingtomove(rex)
-		else:
-			current_movement = "shoulderfirst keeping qf"
-			self.shoulderfirst(rex)
+		closeinbetween = False
+		current_movement = "going to leave"
+		self.goingtomove(rex)
 	elif(current_movement == "shoulderfirst keeping qf"):
 		self.shoulderfirst(rex)
 	elif(current_movement == "keeping qf"):
@@ -595,17 +458,18 @@ class Statemachine():
 	
     def hold(self,ui,rex):
 	global current_motorstate, current_movement
-	if(rex.num_joints==6):	
+	if(rex.num_joints==6):
 		if(current_action == "picking"):
-			rex.joint_angles[5] = open_angle*D2R
+			if(closeinbetween):
+				rex.joint_angles[5] = open_angle*D2R
 			current_movement = "grabbing qi"
 		else:
-			rex.joint_angles[5] = close_angle*D2R
+			if(closeinbetween):
+				rex.joint_angles[5] = close_angle*D2R
 			if(current_movement == "keeping qf"):
 				self.movement_idle()
 			else:
 				current_movement = "keeping qi"
-
 		rex.joint_angles[4] = 0.0	
 	rex.joint_angles[0] = 0.0
         rex.joint_angles[1] = 0.0
@@ -647,10 +511,7 @@ class Statemachine():
 	global current_motorstate,current_movement
 	rex.joint_angles[1] = q[1]*D2R
 	if(current_movement=="shoulderlast grabbing q"):
-		if(abs(q[5]-180) < 0.001):
-			current_movement = "going to grab"
-		else:
-			current_movement = "grabbing q"	
+		current_movement = "going to grab"
 	elif(current_movement=="shoulderlast keeping q"):	
 		current_movement = "keeping q"
 	current_motorstate = "motion"		
