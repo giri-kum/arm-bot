@@ -236,52 +236,6 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
-		elif(current_mode == "Competition 3"):
-			if(comp3_status == "idle"):
-				comp3_status = 'blue'
-				comp3 = 0		
-			if(current_action=="idle"):							
-				if (comp3_status=="blue"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
-					comp3_status = "black"
-					comp3 = 1
-					return 'black'
-				elif(comp3_status=="black"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
-					comp3_status = "red"					
-					comp3 = 2					
-					return 'red'
-				elif (comp3_status=="red"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
-					comp3_status = "orange"
-					comp3 = 3
-					return 'orange'
-				elif(comp3_status=="orange"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
-					comp3_status = "yellow"					
-					comp3 = 4					
-					return 'yellow'
-				elif(comp3_status == 'yellow'):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
-					comp3_status = "green"					
-					comp3 = 5					
-					return 'green'
-				elif(comp3_status=="green"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
-					comp3_status = "violet"					
-					comp3 = 6					
-					return 'violet'
-				elif (comp3_status=="violet"):
-					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
-					comp3_status = "pink"
-					comp3 = 7
-					return 'pink'
-				elif(comp3_status == 'pink'):
-					comp3_status = "idle"
-					comp3 = -1	
-					self.mode_idle()
-			else:
-				self.picknplace(ui,rex)
 		elif(current_mode == "Competition 4"):
 			if(comp4 == -1):
 				comp4 = 0
@@ -330,6 +284,52 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
+		elif(current_mode == "Competition 3"):
+			if(comp3_status == "idle"):
+				comp3_status = 'blue'
+				comp3 = 0		
+			if(current_action=="idle"):							
+				if (comp3_status=="blue"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "black"
+					comp3 = 1
+					return 'black'
+				elif(comp3_status=="black"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "red"					
+					comp3 = 2					
+					return 'red'
+				elif (comp3_status=="red"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "orange"
+					comp3 = 3
+					return 'orange'
+				elif(comp3_status=="orange"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "yellow"					
+					comp3 = 4					
+					return 'yellow'
+				elif(comp3_status == 'yellow'):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "green"					
+					comp3 = 5					
+					return 'green'
+				elif(comp3_status=="green"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+					comp3_status = "violet"					
+					comp3 = 6					
+					return 'violet'
+				elif (comp3_status=="violet"):
+					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
+					comp3_status = "pink"
+					comp3 = 7
+					return 'pink'
+				elif(comp3_status == 'pink'):
+					comp3_status = "idle"
+					comp3 = -1	
+					self.mode_idle()
+			else:
+				self.picknplace(ui,rex)
 		elif(current_mode == "Competition 5"):
 			pass
 
@@ -362,12 +362,13 @@ class Statemachine():
 	if(current_mode=="Competition 2"):
 		#Competition 2: place blocks based on the mirrored position of the blue block.
 		print q_comp
-		new_q = [q_comp[0][comp2], q_comp[1][comp2], q_comp[2][comp2], q_comp[3][comp2],q_comp[4][comp2],q_comp[5][comp2]]
-		new_qh = [qh_comp[0][comp2], qh_comp[1][comp2], qh_comp[2][comp2], qh_comp[3][comp2],qh_comp[4][comp2],qh_comp[5][comp2]]
+		new_q = [q_comp[comp2][0], q_comp[comp2][1], q_comp[comp2][2], q_comp[comp2][3],q_comp[comp2][4],q_comp[comp2][5]]
+		new_qh = [qh_comp[comp2][0], qh_comp[comp2][1], qh_comp[comp2][2], qh_comp[comp2][3],qh_comp[comp2][4],q_comp[comp2][5]]
 	if(current_mode=="Competition 3"):
 		new_q = [-q_comp[0][comp3], q_comp[1][comp3], q_comp[2][comp3], q_comp[3][comp3]]
 	if(current_mode=="Competition 4"):
-		new_q = [-q_comp[0][comp4], q_comp[1][comp4], q_comp[2][comp4], q_comp[3][comp4]]
+		new_q = [q_comp[comp4][0], q_comp[comp4][1], q_comp[comp4][2], q_comp[comp4][3],q_comp[comp4][4],q_comp[comp4][5]]
+		new_qh = [qh_comp[comp4][0], qh_comp[comp4][1], qh_comp[comp4][2], qh_comp[comp4][3],qh_comp[comp4][4],q_comp[comp4][5]]
 	if(current_mode=="Competition 5"):
 		new_q = [-q_comp[0][comp5], q_comp[1][comp5], q_comp[2][comp5], q_comp[3][comp5]]
 	
