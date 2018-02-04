@@ -32,7 +32,8 @@ qh = [0.0]*6 #higher q
 closing_threshold = abs(close_angle) - 18
 #picking = "True"
 #mode ="normal"
-q_comp = np.zeros([4,3])
+q_comp = np.zeros([6,3])
+q_comp = np.zeros([6,3])
 debug = True
 debug_motor= False
 def gen_timestamp(usec=False): #Giri
@@ -53,11 +54,11 @@ def isclose(x,y,tol):
 class Statemachine():
     timerCallback = functools.partial(gen_timestamp)
     
-    def setq(self,new_q,new_qh = [0.0]*4):
+    def setq(self,new_q,new_qh = [0.0]*6):
 	global q, qh
 	q  = new_q
-	qh = new_qh
-"""		
+	qh = new_qh  
+    """		
     def get_orientations(self,n=1):
 	#print [gripper_orientation, wrist_orientation, gripping_height]
 	if(n==1):
@@ -78,10 +79,11 @@ class Statemachine():
 	elif(n==3):
 		print "gripping_height changed from: " + str(gripping_height) + " to " + str(value)
 		gripping_height = value
-"""
-    def setq_comp(self,new_q_comp):
-	global q_comp
+    """
+    def setq_comp(self,new_q_comp,new_qh_comp):
+	global q_comp,qh_comp
 	q_comp = new_q_comp
+	qh_comp = new_qh_comp
 
     def setme(self, ui, rex):
 	self.timerCallback = functools.partial(self.statemachine_check, ui = ui ,rex = rex)
@@ -358,6 +360,7 @@ class Statemachine():
 		new_qh = [-qh[0], qh[1], qh[2], qh[3]]		
 	if(current_mode=="Competition 2"):
 		new_q = [-q_comp[0][comp2], q_comp[1][comp2], q_comp[2][comp2], q_comp[3][comp2]]
+		new_qh = [-qh_comp[0][comp2], qh_comp[1][comp2], qh_comp[2][comp2], qh_comp[3][comp2]]
 	if(current_mode=="Competition 3"):
 		new_q = [-q_comp[0][comp3], q_comp[1][comp3], q_comp[2][comp3], q_comp[3][comp3]]
 	if(current_mode=="Competition 4"):
@@ -366,7 +369,6 @@ class Statemachine():
 		new_q = [-q_comp[0][comp5], q_comp[1][comp5], q_comp[2][comp5], q_comp[3][comp5]]
 	
 	self.setq(new_q,new_qh)		
-	
 
     def goingtomove(self,rex):
 	global	current_movement, current_motorstate
