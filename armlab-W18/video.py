@@ -172,7 +172,7 @@ class Video():
         """
         pass
     
-    def blockDetector(self,colors = "any"): #Josh
+    def blockDetector(self,colors = "all"): #Josh
         """
         TODO:
         Implement your block detector here.  
@@ -239,15 +239,21 @@ class Video():
 		else:
 			return [pos_colors,True]
 	else:
-		n = len(colors)
-		pos_colors = np.zeros([n,3])
-		for i in range(0,len(colors)):
-			pos_colors[i] = self.color_detection(colors[i]) 			
-			if(ce(pos_colors[i])):
-				print colors[i] + " not found"
-				return [np.zeros([n,3]),False]
+		if(colors != "all"):
+			n = len(colors)
+			pos_colors = np.zeros([n,3])
+			for i in range(0,len(colors)):
+				pos_colors[i] = self.color_detection(colors[i]) 			
+				if(ce(pos_colors[i])):
+					print colors[i] + " not found"
+					return [np.zeros([n,3]),False]
+			
+		else:
+			pos_colors = self.color_detection(colors) 			
+			if(ce(pos_colors)):
+				print colors + " not found"
+				return [np.zeros([1,3]),False]		
 		return [pos_colors,True] 
-
 
     def color_detection(self, color_str = 'blue'): #Josh
 
@@ -268,6 +274,7 @@ class Video():
 	    #cv2.drawContours(test_hsv,[box_pts_rgb],0,(255,255,255),2)
 	#cv2.imwrite('color_test.jpg',test_hsv)
 	if color_str == 'red':
+	    print "enter red"
 	    upper_bound1 = np.array([180.,255.,255.])
 	    lower_bound1 = np.array([170.,163.,80.])
 	    upper_bound2 = np.array([5.,255.,255.])
@@ -307,8 +314,49 @@ class Video():
 		    return [centerx, centery, angle_yoverx]
 	    
 	    
+	
 	#if (color_str == 'black' or color_str == 'blue' or color_str == 'orange' or color_str == 'green' or color_str == 'violet' or color_str == 'yellow' or color_str == 'pink' or color_str == 'all'): 
-	else:   
+	elif color_str == 'all':
+	    print "enter all"
+	    upper_bound = np.array(self.hsv_upper_hsv[7])
+	    lower_bound = np.array(self.hsv_lower_hsv[7])
+	    for box_points in self.blobs_box_pts_rgb_frame:
+		pt1 = box_points[0]
+		pt3 = box_points[2]
+		centerx = np.int0((pt1[1] + pt3[1])/2) # box points (output from opencv function) has inverse order of xy compare to our x for row y for column
+		centery = np.int0((pt1[0] + pt3[0])/2)
+		if centerx>=200:
+		    continue
+		#centerx = 280
+		#centery = 403
+		#self.blobs_center_rgb.append([centerx,centery])
+		angle_yoverx = np.arctan2((pt1[1] - pt3[1]),(pt1[0] - pt3[0]))
+		#cv2.circle(test_hsv,(centerx, centery), 2, (255,255,255), -1)
+	    #cv2.imwrite('test_center.jpg',test_hsv)
+		window = hsv_image[centerx-3:centerx+4, centery-3:centery+4]
+		#print window
+		#restore = cv2.cvtColor(window, cv2.COLOR_HSV2BGR)
+		#cv2.imwrite('window_restore.jpg',restore)
+		mask = cv2.inRange(window, lower_bound, upper_bound)
+		#print mask
+		kernel = np.ones((3,3),np.uint8)
+		close = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+		#print centerx, centery
+		#print close
+		kernel = np.ones((3,3),np.uint8)
+		close_sum = sum(map(sum, close))
+		if close_sum >= 255*49*0.7:
+		    #cv2.imwrite('opening {}.jpg'.format(count),close)
+		    #cv2.imwrite('mask {}.jpg'.format(count),mask)
+		    if(centerx<=40 and centery<=40):
+			continue
+		    cv2.drawContours(RGB_image,[box_points],0,(255,255,255),2)
+		    print color_str + 'found at: ', [centerx, centery, angle_yoverx] 
+		    cv2.imwrite('color_test {} .jpg'.format(color_str),RGB_image)
+		    return [centerx, centery, angle_yoverx]
+	    	
+	else:
+	    print "enter others"   
 	    for color_idx in range(len(self.hsv_colors)):
 	        if self.hsv_colors[color_idx] != color_str:
 		    continue
