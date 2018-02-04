@@ -27,7 +27,7 @@ puty = 0.0
 putz = 0.0
 putangle = 0.0
 
-gripper_orientation = 180.0
+gripper_orientation = 90.0
 
 class Gui(QtGui.QMainWindow):
     """ 
@@ -754,8 +754,8 @@ class Gui(QtGui.QMainWindow):
 	new_q = np.zeros([8,6])
 	new_qh = np.zeros([8,6]) #intermediate heights
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
-	final_x = blockx
-	final_y = blocky	
+	final_x = 0
+	final_y = -220
 	height = 40
 	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*0)/10, gripper_orientation]	
 	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
@@ -793,14 +793,17 @@ class Gui(QtGui.QMainWindow):
 	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*6)/10, gripper_orientation]	
 	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
 	# hard code joints angles down below here	
-	new_q[6] = self.roundoff(angles)
-	new_qh[6] = self.roundoff(intermediate_angles)
-	
+	#new_q[6] = self.roundoff(angles)
+	#new_qh[6] = self.roundoff(intermediate_angles)
+	new_q[6] = [1.,10.,55.,19.0,0,90.]
+	new_qh[6] = [1.,18.,33.5,21.,0,90.]
+
 	endCoord = [-(final_x)/10, (final_y)/10, (blockz+height*7)/10, gripper_orientation]	
 	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-	new_q[7] = self.roundoff(angles)
-	new_qh[7] = self.roundoff(intermediate_angles)	
-
+	#new_q[7] = self.roundoff(angles)
+	#new_qh[7] = self.roundoff(intermediate_angles)	
+	new_q[7] = [1.,18.,33.5,21.,0,90.]
+	new_qh[7] = [1.,26.,17.5,9.5,0,90.]
 	self.statemachine.setq_comp(new_q,new_qh)
 	
     def generatecomp5(self):
