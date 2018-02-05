@@ -190,8 +190,7 @@ class Gui(QtGui.QMainWindow):
             video sources like is done below
         """
         color = self.statemachine.timerCallback()
-	states = self.statemachine.getmestatus(False)
-	if(states[0]=="Decluttered"):
+	if(color =="Decluttered"):
 		self.declutter()
 	elif(color != "none"):
 	    self.getangles(color)	
@@ -582,6 +581,8 @@ class Gui(QtGui.QMainWindow):
 	intermediate_angles[4] = angles[4]
 	angles[5] = endCoord[3]
 	intermediate_angles[5] = endCoord[3]
+	if(self.checkfound(angles) and self.checkfound(intermediate_angles,False)):
+		print "Cannot be picked"
 	return [angles,intermediate_angles]
 
 
@@ -681,7 +682,7 @@ class Gui(QtGui.QMainWindow):
 		angles = [0]*6
 		intermediate_angles = [0]*6
 		print "not found"
-		self.statemachine.set_comp5_status("idle")
+		self.statemachine.set_comp5_status("not found")
 
 	else:		
 		[current_mode,current_action, current_movement, current_motorstate]=self.statemachine.getmestatus()
@@ -728,7 +729,7 @@ class Gui(QtGui.QMainWindow):
 	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
 	final_x = -140
 	final_y = -89.5	
-	b = 43
+	b = 43 
 	endCoord = [(final_x+b*0)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
 	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
 		
@@ -832,15 +833,43 @@ class Gui(QtGui.QMainWindow):
 	new_q[7] = [1.,15.8,29.,34.5,0,90.]
 	new_qh[7] = [1.,23.,9.,34.5,0,90.]
 	self.statemachine.setq_comp(new_q,new_qh)
+
+    def generate_comp5(self):
+	print "Entered generate_comp5"
+	n = 3
+	b = 6
+	N = (n+1)*n/2
+	coords = self.pyramid(n,b) 	
+	new_q = np.zeros([N,6])
+	new_qh = np.zeros([N,6]) #intermediate heights
+	endCoord = np.zeros([N,4])
+	for i in range(0,N): 
+		endCoord[i] = [coords[0,i], coords[1,i], coords[2,i], gripper_orientation]	
+		[new_q[i],new_qh[i]] = self.getIK(endCoord[i],0,"placing")
+	print "pyramid: ", coords
+	self.statemachine.setq_comp(new_q,new_qh)
 	
+
+    def pyramid(self,nlayers,spacing): #returns numpy array.
+	coords=zeros((3,nlayers*int((nlayers+1)/2)))
+	count=0
+	blockheight = 3.85
+	for j in range(0, nlayers):
+		for i in range(0 , nlayers-j):
+			print(nlayers-j-1)
+			coords[0][count]=0+spacing*(i-((nlayers-j)/2.0))
+			coords[1][count]=-11
+			coords[2][count]=(blockheight*j) #define blockheight and offset 
+			count=count+1
+	return coords
+    """	
     def generatecomp5(self):
 	print "Entered generatecomp5"
 	new_q = np.zeros([8,6])
 	new_qh = np.zeros([8,6]) #intermediate heights
-	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
 	final_x = -140
-	final_y = -89.5	
-	b = 40
+	final_y = -100	
+	b = 70
 	endCoord = [(final_x+b*0)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
 	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
 		
@@ -886,7 +915,7 @@ class Gui(QtGui.QMainWindow):
 	new_qh[7] = self.roundoff(intermediate_angles)	
 
 	self.statemachine.setq_comp(new_q,new_qh)
-	
+    """	
 
     def competition(self):
 	if(self.ui.btnUser11.text() == "Enter Competition Mode"):
@@ -947,7 +976,7 @@ class Gui(QtGui.QMainWindow):
     def btn4(self): 
 	global declutter_index, declutter_competition
 	if(self.ui.btnUser4.text()=="Block Detector"):
-        	self.video.search_highest()
+        	self.video.blockDetector()
 	elif(self.ui.btnUser4.text()=="Competition 4"):
 		declutter_index = 0
 		declutter_competition = "Competition 4"
@@ -963,16 +992,18 @@ class Gui(QtGui.QMainWindow):
 	if(self.ui.btnUser5.text()=="Repeat"):
         	self.repeat()
 	elif(self.ui.btnUser5.text()=="Competition 5"):
-		self.generatecomp5()
+		self.generate_comp5()
 		self.getangles('all')		
 		self.statemachine.setmystatus("Competition 5", "picking","picking")#mode="testing",action="picking")	
 
 
     def declutter(self):
 	blockx, blocky, blockz, angle = self.video.search_highest()
-	levels_mm = np.float32([0., 19.25, 57.5, 96.25, 134.75, 173.25, 211.75, 250.25])
-	level = np.where(levels_mm==blockz)
-	if(level > 1 and declutter_index < 4):
+	levels_mm = np.float32([0., 19.25, 57.75, 96.25, 134.75, 173.25, 211.75, 250.25])
+	level = (blockz - 19.25)/38.5
+	print "level = ", level
+	
+	if(level >= 1 and declutter_index < 4):
 		endCoord = [(blockx)/10, (blocky)/10, (blockz)/10, gripper_orientation]	
 		
 		[angles,intermediate_angles] = self.getIK(endCoord,angle,"picking")
