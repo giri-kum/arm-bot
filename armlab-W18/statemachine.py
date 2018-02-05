@@ -17,12 +17,13 @@ comp1_status = "idle" # idle, red, blue, green
 comp2_status = "idle" # idle, red, blue, green
 comp3_status = "idle" # idle, red, blue, green
 comp4_status = "idle" # idle, red, blue, green
-comp5_status = "idle" # idle, red, blue, green
+comp5_status = "idle" # idle, found, not found
 comp1 = -1 # 0,1,2,
 comp2 = -1 # 0,1,2,
 comp3 = -1 # 0,1,2,
 comp4 = -1 # 0,1,2,
 comp5 = -1 # 0,1,2,
+comp6 = -1
 close_angle = -40
 open_angle = 90
 closeinbetween = True # for hold state gripper angle  set after picked or placed
@@ -35,7 +36,7 @@ closing_threshold = abs(close_angle) - 18
 #mode ="normal"
 q_comp = np.zeros([3,6]) #3 blocks and 6 motors. Way to encode block position in terms of angles.
 qh_comp = np.zeros([3,6]) #qh_comp- way to encode the intermediate location of the block before grabbing it.
-debug = True
+debug = False
 debug_motor= False
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
@@ -124,6 +125,11 @@ class Statemachine():
     def mode_idle(self):
 	global current_mode	
 	current_mode = "idle"
+
+
+    def set_comp5_status(self, new_status):
+	global comp5_status
+	comp5_status = new_status
 	
     def estop(self, rex):
         #sets the torque of all motors to 0, in case of emergency
@@ -185,8 +191,9 @@ class Statemachine():
 		if(self.checkmotors(rex)):
 			self.motor_idle(rex)
 	current_status = self.getmestatus(True)
-	
+		
 	if(current_status != past_status and current_motorstate == "idle"): 
+			
 		if(debug):
 			print "current_status: " + current_status + "; past_status: " + past_status
 		past_states = self.getmestatus(False)
@@ -199,6 +206,17 @@ class Statemachine():
 			elif(current_movement == "idle"):
 				self.action_idle()		
 				self.mode_idle()
+		elif(current_mode == "Declutter"):
+			print "current_mode = Declutter"
+			if(current_action == "picking" or current_action == "placing"):
+				comp6 = 0
+				print "current_action = picking or placing"			
+				self.picknplace(ui,rex)		
+			#elif(current_action =="placing"):
+			#	self.placing(ui,rex)
+			elif(current_movement == "idle"):
+				self.action_idle()		
+				current_mode = "Decluttered"
 		elif(current_mode == "Competition 1"):
 			if(comp1_status == "idle"):
 				comp1_status = 'blue'
@@ -217,7 +235,23 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
-
+		elif(current_mode == "Competition 5"):
+			if(comp5_status == "found"):
+				self.setmystatus("Competition 5", "picking","picking")#mode="testing",action="picking")	
+				comp5 = comp5+1	
+				comp5_status = "processing"	
+				self.picknplace(ui,rex)
+			elif(comp5_status == "processing"):
+				if(current_action=="idle"):
+					comp5_status = "idle"
+					return "all"
+				else:
+					self.picknplace(ui,rex)
+			else:
+				comp5_status = "idle"
+				comp5 = -1	
+				self.mode_idle()
+			
 		elif(current_mode == "Competition 2"):
 			if(comp2 == -1):
 				comp2 = 0
@@ -285,6 +319,11 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
+
+
+
+
+
 		elif(current_mode == "Competition 3"):
 			if(comp3_status == "idle"):
 				comp3_status = 'black'
@@ -331,27 +370,6 @@ class Statemachine():
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
-		elif(current_mode == "Competition 5"):
-			if(comp5_status == "idle"):
-				if(q[0] == 0 and q[1] == 0 and q[2] == 0 and q[3] == 0):
-					comp5_status = "not found"
-				else:
-					comp5_status = 'all'
-					comp5 = 0		
-			if(current_action=="idle"):							
-				if(q[0] == 0 and q[1] == 0 and q[2] == 0 and q[3] == 0):
-					comp5_status = "not found"
-				if(comp5_status=="all"):
-					self.setmystatus("Competition 5", "picking","picking")#mode="testing",action="picking")	
-					comp5_status = "all"					
-					comp5 = comp5+1					
-					return 'all'
-				elif(comp5_status == 'not found'):
-					comp5_status = "idle"
-					comp5 = -1	
-					self.mode_idle()
-			else:
-				self.picknplace(ui,rex)
 
 	return "none"
 
@@ -372,6 +390,7 @@ class Statemachine():
 		if(current_movement == "idle"):
 			self.action_idle()
 		else:
+			print "current movement = ", current_movement			
 			self.placing(ui,rex)
 	
     def set_placing_location(self):
@@ -393,6 +412,11 @@ class Statemachine():
 	if(current_mode=="Competition 5"):
 		new_q = [q_comp[comp5][0], q_comp[comp5][1], q_comp[comp5][2], q_comp[comp5][3],q_comp[comp5][4],q_comp[comp5][5]]
 		new_qh = [qh_comp[comp5][0], qh_comp[comp5][1], qh_comp[comp5][2], qh_comp[comp5][3],qh_comp[comp5][4],q_comp[comp5][5]]	
+	if(current_mode=="Declutter"):
+		new_q = [q_comp[0], q_comp[1], q_comp[2], q_comp[3], q_comp[4], q_comp[5]]#[q_comp[comp6][0], q_comp[comp6][1], q_comp[comp6][2], q_comp[comp6][3],q_comp[comp6][4],q_comp[comp6][5]]
+		new_qh = [qh_comp[0], qh_comp[1], qh_comp[2], qh_comp[3], qh_comp[4], qh_comp[5] ] #[qh_comp[comp6][0], qh_comp[comp6][1], qh_comp[comp6][2], qh_comp[comp6][3],qh_comp[comp6][4],q_comp[comp6][5]]	
+
+	print "new placement set"
 	self.setq(new_q,new_qh)		
 
     def goingtomove(self,rex):
@@ -414,7 +438,8 @@ class Statemachine():
 	if(current_movement == "picking"):
 		#print "1"
 		closeinbetween = True
-		self.setq(qh,q)
+		if(abs(q[5]-180) < 0.001): # interchange q and qh
+			self.setq(qh,q)
 		self.hold(ui,rex)
 	elif(current_movement == "grabbing qi"):
 		#print "2"		
@@ -430,7 +455,8 @@ class Statemachine():
 		self.close(rex)
 	elif(current_movement == "closing"):
 		#print "6"
-		self.setq(qh,q)			
+		if(abs(q[5]-180) < 0.001): # interchange q and qh
+			self.setq(qh,q)
 		self.movement_idle()		
 	else:
 		pass#print "7:" + current_movement
@@ -447,8 +473,12 @@ class Statemachine():
 		self.open(rex)	
 	elif(current_movement == "opening"):
 		closeinbetween = False
-		current_movement = "going to leave"
-		self.goingtomove(rex)
+		if(abs(q[5]-180) < 0.001):
+			current_movement = "going to leave"
+			self.goingtomove(rex)
+		else:
+			current_movement = "shoulderfirst keeping qf"
+			self.shoulderfirst(rex)
 	elif(current_movement == "shoulderfirst keeping qf"):
 		self.shoulderfirst(rex)
 	elif(current_movement == "keeping qf"):
@@ -462,20 +492,20 @@ class Statemachine():
 		if(current_action == "picking"):
 			if(closeinbetween):
 				rex.joint_angles[5] = open_angle*D2R
-			current_movement = "grabbing qi"
+				current_movement = "grabbing qi"
 		else:
 			if(closeinbetween):
 				rex.joint_angles[5] = close_angle*D2R
-			if(current_movement == "keeping qf"):
-				self.movement_idle()
-			else:
-				current_movement = "keeping qi"
+				if(current_movement == "keeping qf"):
+					self.movement_idle()
+				else:
+					current_movement = "keeping qi"
 		rex.joint_angles[4] = 0.0	
 	rex.joint_angles[0] = 0.0
         rex.joint_angles[1] = 0.0
         rex.joint_angles[2] = 0.0
         rex.joint_angles[3] = 0.0
-	current_motorstate = "motion" 
+	current_motorstate = "motion"
 	rex.cmd_publish()
 
     def reach(self,ui,rex):
@@ -511,7 +541,10 @@ class Statemachine():
 	global current_motorstate,current_movement
 	rex.joint_angles[1] = q[1]*D2R
 	if(current_movement=="shoulderlast grabbing q"):
-		current_movement = "going to grab"
+		if(abs(q[5]-180) < 0.001):
+			current_movement = "going to grab"
+		else:
+			current_movement = "grabbing q"
 	elif(current_movement=="shoulderlast keeping q"):	
 		current_movement = "keeping q"
 	current_motorstate = "motion"		
