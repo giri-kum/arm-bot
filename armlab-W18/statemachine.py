@@ -18,6 +18,7 @@ comp2_status = "idle" # idle, red, blue, green
 comp3_status = "idle" # idle, red, blue, green
 comp4_status = "idle" # idle, red, blue, green
 comp5_status = "idle" # idle, found, not found
+return_status = "none"
 comp1 = -1 # 0,1,2,
 comp2 = -1 # 0,1,2,
 comp3 = -1 # 0,1,2,
@@ -26,7 +27,7 @@ comp5 = -1 # 0,1,2,
 comp6 = -1
 close_angle = -40
 open_angle = 90
-closeinbetween = True # for hold state gripper angle  set after picked or placed
+closeinbetweenpickandplace = True # for hold state gripper angle  set after picked or placed
 past_status = ""
 past_states = [""]*4
 q  = [0.0]*6 #where last q[5] is gripper orientation should not be fed to last motor directly 
@@ -37,7 +38,8 @@ closing_threshold = abs(close_angle) - 18
 q_comp = np.zeros([3,6]) #3 blocks and 6 motors. Way to encode block position in terms of angles.
 qh_comp = np.zeros([3,6]) #qh_comp- way to encode the intermediate location of the block before grabbing it.
 debug = False
-debug_motor= False
+debug_motor= True
+
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
 	if(usec):
@@ -137,7 +139,7 @@ class Statemachine():
         rex.cmd_publish()
         
     def checkmotors(self,rex):
-	atol = 5.00 #do a formal way of selecting this tolerance
+	atol = 5.50 #do a formal way of selecting this tolerance
 	"""
 	print rex.joint_angles[0]*R2D-rex.joint_angles_fb[0]*R2D
 	print rex.joint_angles[1]*R2D-rex.joint_angles_fb[1]*R2D
@@ -185,7 +187,7 @@ class Statemachine():
 
     
     def statemachine_check(self, ui, rex): #running at 100 ms
-	global current_mode, current_action, current_movement, current_motorstate, past_states, comp1_status, comp2_status,comp3_status, comp4_status,comp5_status, comp1, comp2,comp3, comp4,comp5
+	global current_mode, current_action, current_movement, current_motorstate, past_states, comp1_status, comp2_status,comp3_status, comp4_status,comp5_status, comp1, comp2,comp3, comp4,comp5, return_status
 	past_status = past_states[0]+", "+past_states[1]+", "+ past_states[2] + ", "+ past_states[3]
 	if(current_motorstate == "motion"):
 		if(self.checkmotors(rex)):
@@ -193,7 +195,7 @@ class Statemachine():
 	current_status = self.getmestatus(True)
 		
 	if(current_status != past_status and current_motorstate == "idle"): 
-			
+		print "Entered the Statemachine!!"	
 		if(debug):
 			print "current_status: " + current_status + "; past_status: " + past_status
 		past_states = self.getmestatus(False)
@@ -216,7 +218,7 @@ class Statemachine():
 			#	self.placing(ui,rex)
 			elif(current_movement == "idle"):
 				self.action_idle()		
-				current_mode = "Decluttered"
+				return_status = "Decluttered"
 		elif(current_mode == "Competition 1"):
 			if(comp1_status == "idle"):
 				comp1_status = 'blue'
@@ -225,17 +227,19 @@ class Statemachine():
 				if (comp1_status=="blue"):
 					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")					
 					comp1_status = "red"
-					return 'red'
+					return_status = 'red'
 				elif(comp1_status=="red"):
 					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
 					comp1_status = "green"					
-					return 'green'
+					return_status = 'green'
 				elif(comp1_status == 'green'):
 					comp1_status = "idle"
 					self.mode_idle()
 			else:
 				self.picknplace(ui,rex)
 		elif(current_mode == "Competition 5"):
+			print "current_mode = Competition 5",
+			print "comp5_status = ", comp5_status, " and comp5 = ", comp5 
 			if(comp5_status == "found"):
 				self.setmystatus("Competition 5", "picking","picking")#mode="testing",action="picking")	
 				comp5 = comp5+1	
@@ -243,14 +247,15 @@ class Statemachine():
 				self.picknplace(ui,rex)
 			elif(comp5_status == "processing"):
 				if(current_action=="idle"):
-					comp5_status = "idle"
-					return "all"
+					comp5_status = "not found"
+					return_status = "all"
 				else:
 					self.picknplace(ui,rex)
-			else:
-				comp5_status = "idle"
-				comp5 = -1	
-				self.mode_idle()
+			elif(comp5_status == "not found"):
+				return_status = "all"
+				#comp5_status = "idle"
+				#comp5 = -1	
+				#self.mode_idle()
 			
 		elif(current_mode == "Competition 2"):
 			if(comp2 == -1):
@@ -261,11 +266,11 @@ class Statemachine():
 				if (comp2==0):
 					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")					
 					comp2 = 1
-					return 'red'
+					return_status = 'red'
 				elif(comp2 ==1):
 					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
 					comp2 = 2					
-					return 'green'
+					return_status = 'green'
 				elif(comp2 == 2):
 					comp2 = -1
 					self.mode_idle()
@@ -282,37 +287,37 @@ class Statemachine():
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "red"					
 					comp4 = 1					
-					return 'red'
+					return_status = 'red'
 				elif (comp4_status=="red"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
 					comp4_status = "orange"
 					comp4 = 2
-					return 'orange'
+					return_status = 'orange'
 				elif(comp4_status=="orange"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "yellow"					
 					comp4 = 3					
-					return 'yellow'
+					return_status =  'yellow'
 				elif(comp4_status == 'yellow'):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "green"					
 					comp4 = 4					
-					return 'green'
+					return_status =  'green'
 				elif(comp4_status=="green"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "blue"					
 					comp4 = 5					
-					return 'blue'
+					return_status =  'blue'
 				elif (comp4_status=="blue"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
 					comp4_status = "violet"
 					comp4 = 6
-					return 'violet'
+					return_status =  'violet'
 				elif (comp4_status=="violet"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
 					comp4_status = "pink"
 					comp4 = 7
-					return 'pink'
+					return_status =  'pink'
 				elif(comp4_status == 'pink'):
 					comp4_status = "idle"
 					comp4 = -1	
@@ -325,45 +330,48 @@ class Statemachine():
 
 
 		elif(current_mode == "Competition 3"):
+			print "entered competition 3"
 			if(comp3_status == "idle"):
 				comp3_status = 'black'
 				comp3 = 0		
-			if(current_action=="idle"):							
+			if(current_action=="idle"):
+				print "entered competition 3 current_action idle"										
 				if(comp3_status=="black"):
 					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
 					comp3_status = "red"					
-					comp3 = 1					
-					return 'red'
+					comp3 = 1
+					print "entered competition 3 current_action idle comp3_Status = black returning red"														
+					return_status =  'red'
 				elif (comp3_status=="red"):
 					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
 					comp3_status = "orange"
 					comp3 = 2
-					return 'orange'
+					return_status =  'orange'
 				elif(comp3_status=="orange"):
 					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
 					comp3_status = "yellow"					
 					comp3 = 3					
-					return 'yellow'
+					return_status =  'yellow'
 				elif(comp3_status == 'yellow'):
 					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
 					comp3_status = "green"					
 					comp3 = 4					
-					return 'green'
+					return_status =  'green'
 				elif(comp3_status=="green"):
 					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
 					comp3_status = "blue"					
 					comp3 = 5					
-					return 'blue'
+					return_status =  'blue'
 				elif (comp3_status=="blue"):
 					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
 					comp3_status = "violet"
 					comp3 = 6
-					return 'violet'
+					return_status =  'violet'
 				elif (comp3_status=="violet"):
 					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")					
 					comp3_status = "pink"
 					comp3 = 7
-					return 'pink'
+					return_status =  'pink'
 				elif(comp3_status == 'pink'):
 					comp3_status = "idle"
 					comp3 = -1	
@@ -371,12 +379,16 @@ class Statemachine():
 			else:
 				self.picknplace(ui,rex)
 
-	return "none"
+	elif(current_mode == "Competition 5" and current_motorstate == "idle"):
+		if(comp5_status == "found"):
+				self.setmystatus("Competition 5", "picking","picking")#mode="testing",action="picking")	
+		return_status = "all"
+	return return_status
 
 
     def picknplace(self,ui,rex):
 	global current_movement, current_action
-
+	print "picknplace entered"
 	if(current_action == "picking"):
 		if(current_movement == "idle"):
 			current_action = "placing"
@@ -388,12 +400,12 @@ class Statemachine():
 
 	elif(current_action == "placing"):
 		if(current_movement == "idle"):
-			self.action_idle()
+			self.action_idle()			
 		else:
 			print "current movement = ", current_movement			
 			self.placing(ui,rex)
-    else:
-        print("picknplace current_action is idle")
+	else:
+		print "from picknplace else current_action: ", current_action
 	
     def set_placing_location(self):
 	#set_placing_location: for each competition, set_placing_location determines where to place the block.
@@ -418,7 +430,7 @@ class Statemachine():
 		new_q = [q_comp[0], q_comp[1], q_comp[2], q_comp[3], q_comp[4], q_comp[5]]#[q_comp[comp6][0], q_comp[comp6][1], q_comp[comp6][2], q_comp[comp6][3],q_comp[comp6][4],q_comp[comp6][5]]
 		new_qh = [qh_comp[0], qh_comp[1], qh_comp[2], qh_comp[3], qh_comp[4], qh_comp[5] ] #[qh_comp[comp6][0], qh_comp[comp6][1], qh_comp[comp6][2], qh_comp[comp6][3],qh_comp[comp6][4],q_comp[comp6][5]]	
 
-	print "new placement set"
+	print "new placement set", new_q, new_qh
 	self.setq(new_q,new_qh)		
 
     def goingtomove(self,rex):
@@ -436,10 +448,10 @@ class Statemachine():
 
 
     def picking(self,ui,rex):
-	global current_movement, closeinbetween
+	global current_movement, closeinbetweenpickandplace
 	if(current_movement == "picking"):
 		#print "1"
-		closeinbetween = True
+		closeinbetweenpickandplace = False
 		if(abs(q[5]-180) < 0.001): # interchange q and qh
 			self.setq(qh,q)
 		self.hold(ui,rex)
@@ -464,7 +476,7 @@ class Statemachine():
 		pass#print "7:" + current_movement
 
     def placing(self,ui,rex):
-	global current_movement,closeinbetween
+	global current_movement,closeinbetweenpickandplace
 	if(current_movement == "placing"):
 		self.hold(ui,rex)
 	elif(current_movement == "keeping qi"):
@@ -474,7 +486,7 @@ class Statemachine():
 	elif(current_movement == "keeping q"):
 		self.open(rex)	
 	elif(current_movement == "opening"):
-		closeinbetween = False
+		closeinbetweenpickandplace = True
 		if(abs(q[5]-180) < 0.001):
 			current_movement = "going to leave"
 			self.goingtomove(rex)
@@ -489,19 +501,20 @@ class Statemachine():
 
 	
     def hold(self,ui,rex):
+	print "entering hold"
 	global current_motorstate, current_movement
 	if(rex.num_joints==6):
 		if(current_action == "picking"):
-			if(closeinbetween):
+			if(closeinbetweenpickandplace):
 				rex.joint_angles[5] = open_angle*D2R
-				current_movement = "grabbing qi"
+			current_movement = "grabbing qi"
 		else:
-			if(closeinbetween):
+			if(closeinbetweenpickandplace):
 				rex.joint_angles[5] = close_angle*D2R
-				if(current_movement == "keeping qf"):
-					self.movement_idle()
-				else:
-					current_movement = "keeping qi"
+			if(current_movement == "keeping qf"):
+				self.movement_idle()
+			else:
+				current_movement = "keeping qi"
 		rex.joint_angles[4] = 0.0	
 	rex.joint_angles[0] = 0.0
         rex.joint_angles[1] = 0.0
@@ -562,6 +575,7 @@ class Statemachine():
 	elif(current_movement=="shoulderfirst keeping qf"):	
 		current_movement = "keeping qf"
 	current_motorstate = "motion"		
+	print "left shoulderfirst"
 	rex.cmd_publish()
 
 
