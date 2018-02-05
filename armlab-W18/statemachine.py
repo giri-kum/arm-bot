@@ -392,6 +392,8 @@ class Statemachine():
 		else:
 			print "current movement = ", current_movement			
 			self.placing(ui,rex)
+    else:
+        print("picknplace current_action is idle")
 	
     def set_placing_location(self):
 	#set_placing_location: for each competition, set_placing_location determines where to place the block.
