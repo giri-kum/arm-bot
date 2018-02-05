@@ -862,60 +862,6 @@ class Gui(QtGui.QMainWindow):
 			coords[2][count]=(blockheight*j) #define blockheight and offset 
 			count=count+1
 	return coords
-    """	
-    def generatecomp5(self):
-	print "Entered generatecomp5"
-	new_q = np.zeros([8,6])
-	new_qh = np.zeros([8,6]) #intermediate heights
-	final_x = -140
-	final_y = -100	
-	b = 70
-	endCoord = [(final_x+b*0)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
-	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-		
-	new_q[0] = self.roundoff(angles)
-	new_qh[0] = self.roundoff(intermediate_angles)
-	
-	endCoord = [(final_x+b*1)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
-	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-	new_q[1] = self.roundoff(angles)
-	new_qh[1] = self.roundoff(intermediate_angles)
-	print "Genereated FK: ", forwardKinematics(new_q[1][0],new_q[1][1],new_q[1][2],new_q[1][3])
-			
-	endCoord = [(final_x+b*2)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
-	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-	new_q[2] = self.roundoff(angles)
-	new_qh[2] = self.roundoff(intermediate_angles)
-	
-	endCoord = [(final_x+b*3)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
-	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-		
-	new_q[3] = self.roundoff(angles)
-	new_qh[3] = self.roundoff(intermediate_angles)
-	
-	endCoord = [(final_x+b*4)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
-	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-	new_q[4] = self.roundoff(angles)
-	new_qh[4] = self.roundoff(intermediate_angles)
-	
-	endCoord = [(final_x+b*5)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
-	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-	new_q[5] = self.roundoff(angles)
-	new_qh[5] = self.roundoff(intermediate_angles)
-	
-	endCoord = [(final_x+b*6)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
-	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-		
-	new_q[6] = self.roundoff(angles)
-	new_qh[6] = self.roundoff(intermediate_angles)
-	
-	endCoord = [(final_x+b*7)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
-	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
-	new_q[7] = self.roundoff(angles)
-	new_qh[7] = self.roundoff(intermediate_angles)	
-
-	self.statemachine.setq_comp(new_q,new_qh)
-    """	
 
     def competition(self):
 	if(self.ui.btnUser11.text() == "Enter Competition Mode"):
