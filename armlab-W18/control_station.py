@@ -27,7 +27,7 @@ puty = 0.0
 putz = 0.0
 putangle = 0.0
 declutter_index = 0
-gripper_orientation = 180.0
+gripper_orientation = 180
 declutter_competition = "Competition 3"
 class Gui(QtGui.QMainWindow):
     """ 
@@ -509,7 +509,16 @@ class Gui(QtGui.QMainWindow):
 
 
     def teach(self): #Giri
-        self.statemachine.teach(self.ui,self.rex) #Giri
+	[x, y, z, orientation] = [0, 14, 1, 180.0]
+	q = [0.0, 0.0, 0.0, 0.0]
+        [q[0],q[1],q[2],q[3]] = inverseKinematics(x, y, z, orientation)
+	print q
+	self.rex.joint_angles[0] = q[0]*D2R
+        self.rex.joint_angles[1] = q[1]*D2R
+        self.rex.joint_angles[2] = q[2]*D2R
+        self.rex.joint_angles[3] = q[3]*D2R
+	self.rex.cmd_publish()
+	
         	
     def repeat(self): #Giri
 	if(self.ui.btnUser7.text() == "Repeat"):
@@ -539,9 +548,12 @@ class Gui(QtGui.QMainWindow):
 
 
     def getheight(self,angle,action = "picking"):
-	placement_offset = 2 # in cm
+	placement_offset = 1 # in cm
 	if(angle-90<0.1):
 		gripping_height = 3
+	elif(angle-120<0.1):
+		gripping_height = 2
+
 	else:
 		if(action == "picking"):
 			gripping_height = 0.05
@@ -563,12 +575,21 @@ class Gui(QtGui.QMainWindow):
 		else:
 			endCoord[3] = 90
 			[angles[0],angles[1],angles[2],angles[3]] = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
-		
-	self.checkfound(angles)
-	self.checkfound(intermediate_angles,True)
+	if(self.checkfound(angles)): # or self.checkfound(intermediate_angles,True)):
+			endCoord[3] = 120
+			
+			[angles[0],angles[1],angles[2],angles[3]] = inverseKinematics(endCoord[0]-1,endCoord[1]+1,endCoord[2]+self.getheight(endCoord[3],action),endCoord[3])
+
+
+	if(endCoord[3]==120):
+		[intermediate_angles[0],intermediate_angles[1],intermediate_angles[2],intermediate_angles[3]] = inverseKinematics(endCoord[0]-1,endCoord[1]+1,endCoord[2]+intermediate_height,endCoord[3]) # assuming it is reachable	
+		if(self.checkfound(intermediate_angles)):
+			[intermediate_angles[0],intermediate_angles[1],intermediate_angles[2],intermediate_angles[3]] = inverseKinematics(endCoord[0]-1,endCoord[1]+1,endCoord[2]+intermediate_height,90) # assuming it is reachable	
+			
 
 	if(endCoord[3]==180):
-		[intermediate_angles[0],intermediate_angles[1],intermediate_angles[2],intermediate_angles[3]] = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+self.getheight(endCoord[3],action)+intermediate_height,endCoord[3]) # assuming it is reachable	
+		[intermediate_angles[0],intermediate_angles[1],intermediate_angles[2],intermediate_angles[3]] = inverseKinematics(endCoord[0],endCoord[1],endCoord[2]+intermediate_height+self.getheight(endCoord[3],action),endCoord[3]) # assuming it is reachable
+			
 		print self.trim_angle(orientation(angles[0],angle*R2D))		
 		if(action == "placing"):
 			angles[4] = 90 + angles[0]
@@ -577,6 +598,7 @@ class Gui(QtGui.QMainWindow):
 		
 	else:		
 		angles[4] = 0
+	self.checkfound(intermediate_angles,True)
 
 	intermediate_angles[4] = angles[4]
 	angles[5] = endCoord[3]
@@ -700,9 +722,12 @@ class Gui(QtGui.QMainWindow):
 	print "Entered generatecomp2"
 	new_q = np.zeros([3,6])
 	new_qh = np.zeros([3,6]) #intermediate heights
-	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
-	final_x = blockx
-	final_y = blocky	
+#	blockx, blocky, blockz, angle = self.get_color_block_world_coord('red')
+	final_x = 0
+	final_y = -220	
+	blockz = 19.25
+#	final_x = blockx
+#	final_y = blocky	
 	height = 40
 	endCoord = [-(final_x)/10, (final_y)/10, (blockz+ height*0)/10, gripper_orientation]	
 	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
@@ -726,11 +751,12 @@ class Gui(QtGui.QMainWindow):
 	print "Entered generatecomp3"
 	new_q = np.zeros([8,6])
 	new_qh = np.zeros([8,6]) #intermediate heights
-	blockx, blocky, blockz, angle = self.get_color_block_world_coord('blue')
-	final_x = -140
+	#blockx, blocky, blockz, angle = self.get_color_block_world_coord('red')
+	blockz = 19.5	
+	final_x = -150
 	final_y = -89.5	
 	b = 43 
-	endCoord = [(final_x+b*0)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
+	endCoord = [(final_x)/10, (final_y)/10, (blockz)/10, gripper_orientation]	
 	[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
 		
 	new_q[0] = self.roundoff(angles)
@@ -893,7 +919,7 @@ class Gui(QtGui.QMainWindow):
         	self.rex.cfg_publish_default()
 	elif(self.ui.btnUser1.text()=="Competition 1"):
 		if(self.sanity_check(1)):
-			self.getangles('blue')		
+			self.getangles('red')		
 			self.statemachine.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
 		
     def btn2(self): 
@@ -902,7 +928,7 @@ class Gui(QtGui.QMainWindow):
 	elif(self.ui.btnUser2.text()=="Competition 2"):
 		if(self.sanity_check(2)):
 			self.generatecomp2()
-			self.getangles('blue')		
+			self.getangles('red')		
 			self.statemachine.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
 		
     def btn3(self): 
@@ -947,17 +973,33 @@ class Gui(QtGui.QMainWindow):
 	blockx, blocky, blockz, angle = self.video.search_highest()
 	levels_mm = np.float32([0., 19.25, 57.75, 96.25, 134.75, 173.25, 211.75, 250.25])
 	level = (blockz - 19.25)/38.5
-	print "level = ", level
+	print "level =  ", level, "and levels_mm = ", levels_mm
 	
+
+	if(declutter_index == 2):
+		if(declutter_competition == "Competition 3"):
+				if(self.sanity_check(3)):
+					self.generatecomp3()
+					self.getangles('black')		
+					self.statemachine.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
+		elif(declutter_competition == "Competition 4"):
+				if(self.sanity_check(4)):
+					self.generatecomp4()
+					self.getangles('black')		
+					self.statemachine.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")			
+
+
+
 	if(level >= 1 and declutter_index < 4):
 		endCoord = [(blockx)/10, (blocky)/10, (blockz)/10, gripper_orientation]	
-		
-		[angles,intermediate_angles] = self.getIK(endCoord,angle,"picking")
-	
+		print endCoord
+		[angles,intermediate_angles] = self.getIK(endCoord,0,"picking")
+		print "from declutter IK output: ", [angles,intermediate_angles]
 		angles = self.roundoff(angles)
 		intermediate_angles = self.roundoff(intermediate_angles)
-		self.generatedeclutter()
-		self.statemachine.setq(angles, intermediate_angles)
+		if( not self.checkfound(angles)):# and not self.checkfound(intermediate_angles,True)):
+			self.generatedeclutter()
+			self.statemachine.setq(angles, intermediate_angles)
 		self.statemachine.setmystatus("Declutter", "picking","picking")#mode="testing",action="picking")
 	else:
 		if(declutter_competition == "Competition 3"):
@@ -976,12 +1018,12 @@ class Gui(QtGui.QMainWindow):
 	global declutter_index
 
 	if(declutter_index < 4):
-		x = [-250,250,-180,180]
-		y = [-50,-50, -150,-150]
+		x = [0,250, 0,180]
+		y = [-240,-50, 240,-150]
 		final_x = x[declutter_index]
 		final_y = y[declutter_index]
-		final_z = 0	
-		height = 40
+		final_z = 19.25	
+		height = 20
 		endCoord = [(final_x)/10, (final_y)/10, (final_z+ height)/10, gripper_orientation]	
 		[angles,intermediate_angles] = self.getIK(endCoord,0,"placing")
 		
