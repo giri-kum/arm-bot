@@ -24,8 +24,8 @@ comp3 = -1 # 0,1,2,
 comp4 = -1 # 0,1,2,
 comp5 = -1 # 0,1,2,
 comp6 = -1
-close_angle = -30
-open_angle = 90
+close_angle = -60
+open_angle = 70
 beready = True # for hold state gripper angle  set after picked or placed
 past_status = ""
 past_states = [""]*4
@@ -37,7 +37,7 @@ closing_threshold = abs(close_angle) - 18
 q_comp = np.zeros([3,6]) #3 blocks and 6 motors. Way to encode block position in terms of angles.
 qh_comp = np.zeros([3,6]) #qh_comp- way to encode the intermediate location of the block before grabbing it.
 debug = False
-debug_motor= True
+debug_motor= False
 
 def gen_timestamp(usec=False): #Giri
 	t = datetime.datetime.now()
@@ -194,7 +194,7 @@ class Statemachine():
 	current_status = self.getmestatus(True)
 		
 	if(current_status != past_status and current_motorstate == "idle"): 
-		print "Entered the Statemachine!!"	
+		#print "Entered the Statemachine!!"	
 		if(debug):
 			print "current_status: " + current_status + "; past_status: " + past_status
 		past_states = self.getmestatus(False)
@@ -208,10 +208,10 @@ class Statemachine():
 				self.action_idle()		
 				self.mode_idle()
 		elif(current_mode == "Declutter"):
-			print "current_mode = Declutter"
+			#print "current_mode = Declutter"
 			if(current_action == "picking" or current_action == "placing"):
 				comp6 = 0
-				print "current_action = picking or placing"			
+				#print "current_action = picking or placing"			
 				self.picknplace(ui,rex)		
 			#elif(current_action =="placing"):
 			#	self.placing(ui,rex)
@@ -220,14 +220,14 @@ class Statemachine():
 				return "Decluttered"
 		elif(current_mode == "Competition 1"):
 			if(comp1_status == "idle"):
-				comp1_status = 'blue'
+				comp1_status = 'red'
 						
 			if(current_action=="idle"):							
-				if (comp1_status=="blue"):
+				if (comp1_status=="red"):
 					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")					
-					comp1_status = "red"
-					return 'red'
-				elif(comp1_status=="red"):
+					comp1_status = "blue"
+					return 'blue'
+				elif(comp1_status=="blue"):
 					self.setmystatus("Competition 1", "picking","picking")#mode="testing",action="picking")	
 					comp1_status = "green"					
 					return 'green'
@@ -259,13 +259,13 @@ class Statemachine():
 		elif(current_mode == "Competition 2"):
 			if(comp2 == -1):
 				comp2 = 0
-			print forwardKinematics(q[0],q[1],q[2],q[3])
-			print comp2	
+			#print forwardKinematics(q[0],q[1],q[2],q[3])
+			#print comp2	
 			if(current_action=="idle"):							
 				if (comp2==0):
 					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")					
 					comp2 = 1
-					return 'red'
+					return 'blue'
 				elif(comp2 ==1):
 					self.setmystatus("Competition 2", "picking","picking")#mode="testing",action="picking")	
 					comp2 = 2					
@@ -279,43 +279,43 @@ class Statemachine():
 			if(comp4 == -1):
 				comp4 = 0
 				comp4_status = "black"
-			print forwardKinematics(q[0],q[1],q[2],q[3])
-			print comp4	
+			#print forwardKinematics(q[0],q[1],q[2],q[3])
+			#print comp4	
 			if(current_action=="idle"):							
 				if(comp4_status=="black"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "red"					
-					comp4 = 1					
+					comp4 = comp4 + 1					
 					return 'red'
 				elif (comp4_status=="red"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
 					comp4_status = "orange"
-					comp4 = 2
+					comp4 = comp4 + 1
 					return 'orange'
 				elif(comp4_status=="orange"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "yellow"					
-					comp4 = 3					
+					comp4 = comp4 + 1					
 					return 'yellow'
 				elif(comp4_status == 'yellow'):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "green"					
-					comp4 = 4					
+					comp4 = comp4 + 1					
 					return 'green'
 				elif(comp4_status=="green"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")	
 					comp4_status = "blue"					
-					comp4 = 5					
+					comp4 = comp4 + 1					
 					return 'blue'
 				elif (comp4_status=="blue"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
 					comp4_status = "violet"
-					comp4 = 6
+					comp4 = comp4 + 1
 					return 'violet'
 				elif (comp4_status=="violet"):
 					self.setmystatus("Competition 4", "picking","picking")#mode="testing",action="picking")					
 					comp4_status = "pink"
-					comp4 = 7
+					comp4 = comp4 + 1
 					return 'pink'
 				elif(comp4_status == 'pink'):
 					comp4_status = "idle"
@@ -329,12 +329,12 @@ class Statemachine():
 
 
 		elif(current_mode == "Competition 3"):
-			print "entered competition 3"
+			#print "entered competition 3, comp3_status = ", comp3_status, " comp3 = ", comp3
 			if(comp3_status == "idle"):
 				comp3_status = 'black'
 				comp3 = 0		
 			if(current_action=="idle"):
-				print "entered competition 3 current_action idle"										
+			#	print "entered competition 3 current_action idle"										
 				if(comp3_status=="black"):
 					self.setmystatus("Competition 3", "picking","picking")#mode="testing",action="picking")	
 					comp3_status = "red"					
@@ -392,24 +392,30 @@ class Statemachine():
 
     def picknplace(self,ui,rex):
 	global current_movement, current_action
-	print "picknplace entered"
-	if(current_action == "picking"):
-		if(current_movement == "idle"):
-			current_action = "placing"
-			current_movement = "placing"
-			self.set_placing_location()
-			self.placing(ui,rex)
-		else:
-			self.picking(ui,rex)
-
-	elif(current_action == "placing"):
-		if(current_movement == "idle"):
-			self.action_idle()			
-		else:
-			print "current movement = ", current_movement			
-			self.placing(ui,rex)
+	# Comment this region if dont want this 
+	if(q[0] == 0 and q[1] == 0 and q[2] == 0 and q[3] == 0):
+		print "Zero position, pick and place aborted"
+		self.action_idle()
+		self.movement_idle()
+		
 	else:
-		print "from picknplace else current_action: ", current_action
+		if(current_action == "picking"):
+			if(current_movement == "idle"):
+				current_action = "placing"
+				current_movement = "placing"
+				self.set_placing_location()
+				self.placing(ui,rex)
+			else:
+				self.picking(ui,rex)
+
+		elif(current_action == "placing"):
+			if(current_movement == "idle"):
+				self.action_idle()			
+			else:
+				print "current movement = ", current_movement			
+				self.placing(ui,rex)
+		else:
+			print "from picknplace else current_action: ", current_action
 	
     def set_placing_location(self):
 	#set_placing_location: for each competition, set_placing_location determines where to place the block.
