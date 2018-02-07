@@ -6,7 +6,7 @@ d1=12.1#11.7 #link1 length
 alpha1=-90 #link1 twist
 a2=10 #link2 length
 a3=10.1 #link3 length
-a4=13#10.86#11.1#11.1 before#11 #link4 length
+a4=10.86#13#10.86#11.1#11.1 before#11 #link4 length
 origin_offset = [0.7,-1,0] #in cm
 debug = False
 #Inverse kinematics accepts variables in cm and degrees!
