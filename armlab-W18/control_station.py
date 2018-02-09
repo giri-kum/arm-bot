@@ -470,7 +470,6 @@ class Gui(QtGui.QMainWindow):
 		tmp_coord = np.float32([[self.video.extrinsic_cal_pixel_coord[0]],[self.video.extrinsic_cal_pixel_coord[1]],[self.video.extrinsic_cal_pixel_coord[2]]])
 		camera_coord = 941.0*cv2.undistortPoints(tmp_coord,self.video.intrinsic,self.video.distortion_array)
 		rot_rad = -1.0*np.arctan2((camera_coord[1][0][1]-camera_coord[0][0][1]),(camera_coord[1][0][0]-camera_coord[0][0][0]))
-		print "rotation in degrees = ", rot_rad*R2D
 		if rot_rad < 0:
 		    z_rot = rot_rad + 0.5*np.pi
 		else:
